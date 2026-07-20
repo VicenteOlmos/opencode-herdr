@@ -1,0 +1,39 @@
+schema: spec-driven
+
+context: |
+  Project is intentionally empty/new.
+  Stack, package manager, architecture, dependencies, and conventions are not yet detected.
+  Testing runner is not present; strict TDD is disabled.
+
+strict_tdd: false
+
+testing:
+  runner: ""
+  framework: ""
+  unit: false
+  integration: false
+  e2e: false
+  coverage: false
+  linter: ""
+  type_checker: ""
+  formatter: ""
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes.
+  specs:
+    - Use Given/When/Then scenarios.
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY).
+  design:
+    - Document architecture decisions with rationale.
+  tasks:
+    - Group tasks by phase and keep them completable in one session.
+  apply:
+    tdd: false
+    test_command: ""
+  verify:
+    test_command: ""
+    build_command: ""
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas.
