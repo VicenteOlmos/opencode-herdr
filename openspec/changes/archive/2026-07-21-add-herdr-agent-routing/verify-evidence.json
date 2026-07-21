@@ -1,0 +1,38 @@
+{
+  "schema": "gentle-ai.verification-evidence/v1",
+  "change": "add-herdr-agent-routing",
+  "lineage_id": "review-370dd10bea913d6e",
+  "authority_revision": "sha256:49da77a7ac11113a8853f5b883e9f9368f81e4ea87a7f07a30fa71e99f78d8bb",
+  "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+  "review_state": "validating",
+  "projection": "staged",
+  "candidate_tree": "3ec1cf59a8b43886b218f2bf61a1fde0e42e3004",
+  "mode": "standard",
+  "passed": true,
+  "requirements": { "compliant": 10, "total": 10 },
+  "scenarios": { "compliant": 22, "total": 22 },
+  "tasks": { "complete": 31, "total": 31 },
+  "tests": { "passed": 30, "failed": 0, "assertions": 69 },
+  "coverage": { "functions_percent": 90.73, "lines_percent": 96.66, "threshold_percent": 0 },
+  "commands": [
+    { "command": "bun install --frozen-lockfile", "exit_code": 0, "output_sha256": "sha256:825b795370b02abb54d371e2e5d05df165d20ae6546cb833c7b2a2fbbbff9b17", "result": "33 installs across 39 packages; no changes" },
+    { "command": "bun test test/phase6.test.ts", "exit_code": 0, "output_sha256": "sha256:8ec256116cddfdd419b984b6e32c6a5a4e5eabf3f66724f09702eb623e058cd4", "result": "8 passed; adapter parsing and real runner" },
+    { "command": "bun test test/provider.test.ts test/capabilities.test.ts", "exit_code": 0, "output_sha256": "sha256:118778feb1312dc6dd4333f8b021d37d55a7b94844642c5dce19d3edb58a2ef8", "result": "7 passed; provider, snapshot, and stale behavior" },
+    { "command": "bun test test/herdr.test.ts test/remediation.test.ts", "exit_code": 0, "output_sha256": "sha256:a2fbc75e13d82b31fdf6104f02a80211275afb599883deb9ff12188c1aec27bc", "result": "7 passed; fake Herdr lifecycle and abort/error behavior" },
+    { "command": "bun /tmp/opencode/opencode-herdr-final-spec-contracts.ts", "exit_code": 0, "output_sha256": "sha256:5f4e3fbebe6ee6ac702a18b135770d60e76abbb3c03fb49ec7a3b8405890d138", "result": "generation, stream, usage, metadata, transport, command, catalog, and stale contracts passed" },
+    { "command": "bun /tmp/opencode/opencode-herdr-final-active-abort.ts", "exit_code": 0, "output_sha256": "sha256:ce0e52913277f2f38d1f0f29bb6b6975eae938f9b9c0d8f6d388def0c71ad88b", "result": "active abort rejected success and cleaned only owned pane" },
+    { "command": "bun test", "exit_code": 0, "output_sha256": "sha256:cf41c7410576f940a34f38cf527eea9a2a9e26f91bfd645ff323fe8244fdfec6", "result": "30 passed; 0 failed; 69 assertions" },
+    { "command": "bun run typecheck", "exit_code": 0, "output_sha256": "sha256:0a7cbec9e31e5ab1dc3f62bf0e9994201b491a121c31235f27316f5151281817", "result": "TypeScript no-emit check passed" },
+    { "command": "bun test --coverage", "exit_code": 0, "output_sha256": "sha256:7104a71a3f58befae82d56650bd6ed9f2aeb39cac098da09d3eb49a06e44932b", "result": "90.73% functions; 96.66% lines" },
+    { "command": "bun run smoke", "exit_code": 0, "output_sha256": "sha256:3061c6887284e965db7107ec804d639009464bd43ca0151aa4ef738e94d008db", "result": "real runner/result path through fake Herdr lifecycle passed" },
+    { "command": "/tmp/opencode/opencode-herdr-final-isolated-opencode.sh", "exit_code": 0, "output_sha256": "sha256:f2081402aaf2c8f6a1155d192c9d64ec45f8c15b73d18b72300b09ef7e51bdb4", "result": "OpenCode 1.18.4 provider listing, snapshot, stale reload, and byte-identical config passed" },
+    { "command": "rtk git diff --cached --check", "exit_code": 0, "output_sha256": "sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b", "result": "passed" },
+    { "command": "gentle-ai review status --cwd /home/vicho/programming/opencode-herdr", "exit_code": 0, "output_sha256": "sha256:57ec1c3422e97f0813976e4608f2f06fdd272169b6afce4b3ef9a22c8015c25c", "result": "authoritative compact-v2 lineage validating with no problems" }
+  ],
+  "blockers": [],
+  "critical_findings": [],
+  "warnings": [
+    "Design says HERDR_ENV=1 is required, while runtime context validation currently enforces workspace/tab/pane IDs but does not inspect HERDR_ENV; no specification scenario failed.",
+    "Native review informational findings remain classified as info and were not reopened by final verification."
+  ]
+}
