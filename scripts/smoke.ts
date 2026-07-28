@@ -8,30 +8,52 @@ const root = await mkdtemp("/tmp/opencode-herdr-smoke-")
 const bin = join(root, "bin")
 await Bun.$`mkdir -p ${bin}`
 const fake = join(bin, "herdr")
-const state = join(root, "agent-state.json")
-await writeFile(fake, `#!/usr/bin/env bun
-const a = process.argv.slice(2); const at = (x) => a[a.indexOf(x)+1];
-const state = process.env.FAKE_HERDR_STATE;
-if (a[0] === "agent" && a[1] === "start") { const argv = a.slice(a.indexOf("--")+1); await Bun.write(state, JSON.stringify(argv)); console.log(JSON.stringify({type:"agent_started",agent:{name:a[2],terminal_id:"t",pane_id:"p",cwd:at("--cwd"),workspace_id:at("--workspace"),tab_id:at("--tab")},argv})); }
-else if (a[0] === "agent" && a[1] === "wait" && at("--status") === "working") { const argv = JSON.parse(await Bun.file(state).text()); const child = Bun.spawn(argv, { stdout:"pipe", stderr:"pipe", env: process.env }); await child.exited; console.log("{}"); }
-else if (a[0] === "agent" && a[1] === "get") console.log(JSON.stringify({terminal_id:"t",pane_id:"p",status:"done"}));
-else console.log("{}");
-`)
+await writeFile(
+  fake,
+  `#!/usr/bin/env bun
+const a = process.argv.slice(2)
+if (a[0] === "tab" && a[1] === "list") {
+  console.log(JSON.stringify({ result: { tabs: [{ tab_id: "w:tH", workspace_id: "w", label: "opencode-herdr" }] } }))
+} else if (a[0] === "pane" && a[1] === "list") {
+  console.log(JSON.stringify({ result: { panes: [{ pane_id: "w:seed", tab_id: "w:tH", workspace_id: "w", terminal_id: "term-seed" }] } }))
+} else if (a[0] === "pane" && a[1] === "split") {
+  console.log(JSON.stringify({ result: { pane: { pane_id: "w:pJob", terminal_id: "term-job", tab_id: "w:tH" } } }))
+} else if (a[0] === "pane" && a[1] === "run") {
+  const argv = a.slice(3)
+  const child = Bun.spawn(argv, { stdout: "pipe", stderr: "pipe", env: process.env })
+  await child.exited
+  console.log("{}")
+} else if (a[0] === "pane" && a[1] === "rename") {
+  console.log("{}")
+} else if (a[0] === "pane" && a[1] === "close") {
+  console.log("{}")
+} else console.log("{}")
+`,
+)
 await chmod(fake, 0o755)
-const agent = join(bin, "agent")
-await writeFile(agent, "#!/bin/sh\nprintf '%s\\n' '{\"type\":\"result\",\"result\":\"fake runtime ok\"}'\n")
-await chmod(agent, 0o755)
+const agentBin = join(bin, "agent")
+await writeFile(agentBin, "#!/bin/sh\nprintf '%s\\n' '{\"type\":\"result\",\"result\":\"fake runtime ok\"}'\n")
+await chmod(agentBin, 0o755)
 const prior = process.env.PATH
 process.env.PATH = `${bin}:${prior}`
-process.env.FAKE_HERDR_STATE = state
 try {
-  const target: any = { id: targetId("cursor", "safe"), name: "Cursor", adapter: "cursor", nativeModel: "safe", provenance: "verified", limits: { context: 1, output: 1 }, toolCall: true, toolMode: "delegated-agent" }
-  const controller = new HerdrController({ root, cwd: root, workspace: "w", tab: "tab" })
-  const output: any = await createHerdr({ targets: [target], controller }).languageModel(target.id).doGenerate({ prompt: [{ role: "user", content: [{ type: "text", text: "safe $task" }] }] } as any)
+  const target: any = {
+    id: targetId("cursor", "safe"),
+    name: "Cursor",
+    adapter: "cursor",
+    nativeModel: "safe",
+    provenance: "verified",
+    limits: { context: 1, output: 1 },
+    toolCall: true,
+    toolMode: "delegated-agent",
+  }
+  const controller = new HerdrController({ root, cwd: root, workspace: "w", tab: "tab", resultTimeoutMs: 15_000 })
+  const output: any = await createHerdr({ targets: [target], controller }).languageModel(target.id).doGenerate({
+    prompt: [{ role: "user", content: [{ type: "text", text: "safe $task" }] }],
+  } as any)
   if (output.content[0]?.text !== "fake runtime ok") throw new Error("fake runtime failed")
-  console.log("smoke: fake Herdr lifecycle passed")
+  console.log("smoke: herdr tab-pool lifecycle passed")
 } finally {
   process.env.PATH = prior
-  delete process.env.FAKE_HERDR_STATE
   await rm(root, { recursive: true, force: true })
 }

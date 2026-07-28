@@ -1,28 +1,141 @@
+import { asRecord, defaultRun, parseCliJson, requireString, type Run } from "./cli.js"
 import { HerdrError } from "./errors.js"
-export type Run = (argv: string[]) => Promise<{ code: number; stdout: string; stderr?: string }>
-export type OwnedAgent = { terminalId: string; paneId: string }
-export type AgentState = OwnedAgent & { status: "done" | "idle" | "working" | "cancelled" }
+import { herdrAgentName, HerdrPool, type JobRecord } from "./pool.js"
+
+export type { Run } from "./cli.js"
+export type OwnedAgent = { terminalId: string; paneId: string; tabId?: string; jobId?: string; name?: string }
+export type AgentState = OwnedAgent & { status: "done" | "idle" | "working" | "blocked" | "cancelled" | "unknown" }
+
+export type StartKindInput = {
+  name: string
+  kind: string
+  paneId: string
+  args?: string[]
+  timeoutMs?: number
+}
+
+export type StartJobInput = {
+  jobId: string
+  cwd: string
+  workspace: string
+  argv: string[]
+  env?: Record<string, string>
+  pool: HerdrPool
+}
+
+/** Herdr control-plane client (API protocol 17+). */
 export class HerdrAgent {
-  constructor(private readonly run: Run = async (argv) => { const child = Bun.spawn(argv, { stdout: "pipe", stderr: "pipe", env: process.env }); return { code: await child.exited, stdout: await new Response(child.stdout).text(), stderr: await new Response(child.stderr).text() } }) {}
-  async start(input: { name: string; cwd: string; workspace: string; tab: string; argv: string[]; job?: string }): Promise<OwnedAgent> {
-    if (!/^[a-zA-Z0-9._-]+$/.test(input.name) || !input.argv.length) throw new HerdrError("unsafe agent input")
-    const argv = ["herdr", "agent", "start", input.name, "--cwd", input.cwd, "--workspace", input.workspace, "--tab", input.tab, "--split", "right", "--env", `OPENCODE_HERDR_JOB=${input.job ?? ""}`, "--no-focus", "--", ...input.argv]
-    const result = await this.run(argv); if (result.code !== 0) throw new HerdrError("agent start failed")
-    let parsed: any; try { parsed = JSON.parse(result.stdout) } catch { throw new HerdrError("invalid agent start response") }
-    const agent = parsed?.agent
-    if (parsed?.type !== "agent_started" || agent?.name !== input.name || agent?.cwd !== input.cwd || agent?.workspace_id !== input.workspace || agent?.tab_id !== input.tab || !agent?.terminal_id || !agent?.pane_id || JSON.stringify(parsed.argv) !== JSON.stringify(input.argv)) throw new HerdrError("mismatched agent start response")
-    return { terminalId: agent.terminal_id, paneId: agent.pane_id }
+  constructor(private readonly run: Run = defaultRun) {}
+
+  /** Start a supported interactive agent kind in an existing pane. */
+  async startKind(input: StartKindInput): Promise<OwnedAgent> {
+    const name = herdrAgentName(input.name)
+    if (!input.kind.trim() || !input.paneId.trim()) throw new HerdrError("unsafe agent input")
+    const args = input.args ?? []
+    for (const arg of args) if (/[\n\r\0]/.test(arg)) throw new HerdrError("unsafe agent arg")
+    const argv = [
+      "herdr", "agent", "start", name,
+      "--kind", input.kind,
+      "--pane", input.paneId,
+      ...(input.timeoutMs ? ["--timeout", String(input.timeoutMs)] : []),
+      ...(args.length ? ["--", ...args] : []),
+    ]
+    const result = await this.run(argv)
+    if (result.code !== 0) throw new HerdrError("agent start failed")
+    const body = asRecord(parseCliJson(result.stdout))
+    const agent = asRecord(body?.agent) ?? body
+    if (!agent) throw new HerdrError("invalid agent start response")
+    const terminalId = requireString(agent.terminal_id, "terminal_id")
+    const paneId = requireString(agent.pane_id, "pane_id")
+    if (paneId !== input.paneId) throw new HerdrError("mismatched agent start response")
+    return { terminalId, paneId, name }
   }
-  async cancel(agent: OwnedAgent) { await this.run(["herdr", "agent", "send", agent.terminalId, "\u0003"]); await this.wait(agent, "idle"); await this.run(["herdr", "pane", "close", agent.paneId]) }
-  async close(agent: OwnedAgent) { await this.run(["herdr", "pane", "close", agent.paneId]) }
-  async wait(agent: OwnedAgent, status: "idle" | "working", timeout = 60_000) { const result = await this.run(["herdr", "agent", "wait", agent.terminalId, "--status", status, "--timeout", String(timeout)]); if (result.code !== 0) throw new HerdrError(`agent did not reach ${status}`) }
+
+  /**
+   * Acquire a pool pane and run a fixed argv job (opencode-herdr runner).
+   * Completion is tracked via the job result file + registry, not agent TUI state.
+   */
+  async startJob(input: StartJobInput): Promise<OwnedAgent & { record: JobRecord }> {
+    if (!input.argv.length) throw new HerdrError("unsafe agent input")
+    for (const arg of input.argv) if (/[\n\r\0]/.test(arg)) throw new HerdrError("unsafe agent arg")
+    const record = await input.pool.acquire({
+      jobId: input.jobId,
+      workspaceId: input.workspace,
+      cwd: input.cwd,
+      env: input.env,
+    })
+    const result = await this.run(["herdr", "pane", "run", record.paneId, ...input.argv])
+    if (result.code !== 0) {
+      await input.pool.release(input.jobId, { status: "error" })
+      throw new HerdrError("pane run failed")
+    }
+    return {
+      terminalId: record.terminalId,
+      paneId: record.paneId,
+      tabId: record.tabId,
+      jobId: record.jobId,
+      name: herdrAgentName(input.jobId),
+      record,
+    }
+  }
+
+  async cancel(agent: OwnedAgent, pool?: HerdrPool, opts: { closePane?: boolean } = {}) {
+    await this.run(["herdr", "pane", "send-keys", agent.paneId, "ctrl+c"]).catch(() => undefined)
+    await this.wait(agent, ["idle", "done", "unknown"], 5_000).catch(() => undefined)
+    const closePane = opts.closePane !== false
+    if (pool && agent.jobId) await pool.release(agent.jobId, { status: "cancelled", closePane })
+    else if (closePane) await this.close(agent)
+  }
+
+  async close(agent: OwnedAgent) {
+    await this.run(["herdr", "pane", "close", agent.paneId])
+  }
+
+  /**
+   * Herdr agent CLI target: prefer pane id.
+   * `terminal_id` often returns agent_not_found even while the agent is listed.
+   */
+  private target(agent: OwnedAgent) {
+    return agent.paneId
+  }
+
+  async wait(agent: OwnedAgent, until: Array<"idle" | "working" | "blocked" | "done" | "unknown"> = ["idle", "done", "blocked"], timeout = 60_000) {
+    const argv = ["herdr", "agent", "wait", this.target(agent), "--timeout", String(timeout)]
+    for (const status of until) argv.push("--until", status)
+    const result = await this.run(argv)
+    if (result.code !== 0) throw new HerdrError(`agent did not reach ${until.join("|")}`)
+  }
+
   async get(agent: OwnedAgent): Promise<AgentState> {
-    const result = await this.run(["herdr", "agent", "get", agent.terminalId])
+    const result = await this.run(["herdr", "agent", "get", this.target(agent)])
     if (result.code !== 0) throw new HerdrError("agent get failed")
-    let state: any; try { state = JSON.parse(result.stdout) } catch { throw new HerdrError("invalid agent get response") }
-    if (state?.terminal_id !== agent.terminalId || state?.pane_id !== agent.paneId || !["done", "idle", "working", "cancelled"].includes(state?.status)) throw new HerdrError("mismatched agent get response")
-    return { terminalId: state.terminal_id, paneId: state.pane_id, status: state.status }
+    const body = asRecord(parseCliJson(result.stdout))
+    const row = asRecord(body?.agent) ?? body
+    if (!row) throw new HerdrError("invalid agent get response")
+    const terminalId = requireString(row.terminal_id, "terminal_id")
+    const paneId = requireString(row.pane_id, "pane_id")
+    const statusRaw = typeof row.agent_status === "string" ? row.agent_status : typeof row.status === "string" ? row.status : ""
+    if (paneId !== agent.paneId) throw new HerdrError("mismatched agent get response")
+    const status = ["done", "idle", "working", "blocked", "cancelled", "unknown"].includes(statusRaw)
+      ? statusRaw as AgentState["status"]
+      : "unknown"
+    return { terminalId, paneId, tabId: agent.tabId, jobId: agent.jobId, status }
   }
-  async read(agent: OwnedAgent) { const result = await this.run(["herdr", "agent", "read", agent.terminalId, "--source", "recent", "--lines", "20"]); if (result.code !== 0) throw new HerdrError("agent read failed"); return result.stdout }
-  async send(agent: OwnedAgent, text: string) { const result = await this.run(["herdr", "agent", "send", agent.terminalId, text]); if (result.code !== 0) throw new HerdrError("agent send failed") }
+
+  async read(agent: OwnedAgent) {
+    const result = await this.run(["herdr", "agent", "read", this.target(agent), "--source", "recent-unwrapped", "--lines", "40"])
+    if (result.code !== 0) throw new HerdrError("agent read failed")
+    return result.stdout
+  }
+
+  async send(agent: OwnedAgent, text: string) {
+    // Prefer agent prompt; Cursor often needs an extra Enter to submit the composer input.
+    const prompted = await this.run(["herdr", "agent", "prompt", this.target(agent), text])
+    if (prompted.code === 0) {
+      await this.run(["herdr", "pane", "send-keys", agent.paneId, "enter"]).catch(() => undefined)
+      return
+    }
+    const result = await this.run(["herdr", "pane", "run", agent.paneId, text])
+    if (result.code !== 0) throw new HerdrError("agent send failed")
+  }
 }
