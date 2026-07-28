@@ -2,7 +2,8 @@ node_modules/
 dist/
 coverage/
 .codegraph/
-.atl/.skill-registry.cache.json
 *.log
 *.tgz
 opencode-herdr-*.tgz
+openspec/
+.atl/
