@@ -43,10 +43,9 @@ if [ "$REAL" != true ]; then
   echo "==> npm publish --dry-run"
   npm publish --dry-run --access public
   echo
-  echo "Dry-run only. Re-run with --real after:"
-  echo "  1) npm login"
-  echo "  2) create GitHub repo VicenteOlmos/opencode-herdr (if missing)"
-  echo "  3) git push + tag v\$(node -p \"require('./package.json').version\")"
+  echo "Dry-run only. Re-run with --real after npm login."
+  echo "If npm returns 403 2FA required:"
+  echo "  ./scripts/publish.sh --real --otp <authenticator-code>"
   exit 0
 fi
 

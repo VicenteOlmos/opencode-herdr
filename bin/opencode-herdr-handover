@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# npm-safe launcher; implementation stays Bun TypeScript.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if ! command -v bun >/dev/null 2>&1; then
+  echo "opencode-herdr-handover: bun is required on PATH" >&2
+  exit 127
+fi
+exec bun "$ROOT/src/handover-cli.ts" "$@"
