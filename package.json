@@ -23,9 +23,10 @@
     ".": "./src/index.ts"
   },
   "bin": {
-    "opencode-herdr-handover": "./src/handover-cli.ts"
+    "opencode-herdr-handover": "./bin/opencode-herdr-handover"
   },
   "files": [
+    "bin",
     "src",
     "skills",
     "README.md",
