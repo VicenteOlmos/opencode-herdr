@@ -1,16 +1,58 @@
 {
   "name": "opencode-herdr",
   "version": "0.1.0",
+  "description": "OpenCode plugin/provider that routes models and /herdr-handover through Herdr",
+  "license": "MIT",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VicenteOlmos/opencode-herdr.git"
+  },
+  "bugs": {
+    "url": "https://github.com/VicenteOlmos/opencode-herdr/issues"
+  },
+  "homepage": "https://github.com/VicenteOlmos/opencode-herdr#readme",
+  "keywords": [
+    "opencode",
+    "herdr",
+    "plugin",
+    "provider",
+    "handover"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "opencode-herdr-handover": "./src/handover-cli.ts"
+  },
+  "files": [
+    "src",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit",
-    "smoke": "bun run scripts/smoke.ts"
+    "smoke": "bun run scripts/smoke.ts",
+    "pack:check": "npm pack --dry-run",
+    "publish:npm": "bash scripts/publish.sh"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "^1.18.0"
   },
   "dependencies": {
     "@ai-sdk/provider": "4.0.3",
     "@opencode-ai/plugin": "1.18.4"
   },
-  "devDependencies": { "@types/bun": "1.3.10", "typescript": "5.9.3" }
+  "devDependencies": {
+    "@types/bun": "1.3.10",
+    "typescript": "5.9.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }
