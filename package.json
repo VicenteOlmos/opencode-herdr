@@ -1,8 +1,9 @@
 {
   "name": "opencode-herdr",
-  "version": "0.1.0",
-  "description": "OpenCode plugin/provider that routes models and /herdr-handover through Herdr",
+  "version": "0.1.1",
+  "description": "Route OpenCode agents through Herdr panes as herdr/<adapter>/<model> (Cursor, Claude, Codex, OpenCode)",
   "license": "MIT",
+  "author": "Vicente Olmos",
   "type": "module",
   "repository": {
     "type": "git",
@@ -14,10 +15,20 @@
   "homepage": "https://github.com/VicenteOlmos/opencode-herdr#readme",
   "keywords": [
     "opencode",
+    "opencode-plugin",
+    "opencode-provider",
     "herdr",
-    "plugin",
-    "provider",
-    "handover"
+    "herdr-handover",
+    "ai-agent",
+    "coding-agent",
+    "multi-agent",
+    "handover",
+    "cursor",
+    "claude-code",
+    "codex",
+    "terminal-multiplexer",
+    "ai-sdk",
+    "llm"
   ],
   "exports": {
     ".": "./src/index.ts"
