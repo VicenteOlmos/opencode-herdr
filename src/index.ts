@@ -23,7 +23,8 @@ export { HandoverAbort } from "./errors.js"
 
 const herdrId = /^[a-zA-Z0-9._:-]+$/
 const run = async (argv: string[]) => {
-  const child = Bun.spawn(argv, { stdout: "pipe", stderr: "pipe" })
+  // Pass env explicitly so mid-process PATH updates (tests / wrappers) are visible.
+  const child = Bun.spawn(argv, { stdout: "pipe", stderr: "pipe", env: process.env })
   return { code: await child.exited, stdout: await new Response(child.stdout).text(), stderr: await new Response(child.stderr).text() }
 }
 const server: Plugin = async (context, options) => {

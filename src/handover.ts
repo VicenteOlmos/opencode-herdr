@@ -30,6 +30,8 @@ export type HandoverInput = {
   pane?: string
   runtime?: string
   defaultRuntime?: string
+  /** Override binary discovery (tests); defaults to `availableRuntimes()`. */
+  runtimes?: string[]
   note?: string
   stateDir: string
   run?: Run
@@ -110,7 +112,7 @@ export async function createHandover(input: HandoverInput): Promise<HandoverResu
   if (!input.sessionId.trim()) throw new HerdrError("sessionId is required")
   if (!input.directory.startsWith("/")) throw new HerdrError("directory must be an absolute path")
   if (!idOk(input.workspace) || !idOk(input.tab) || (input.pane && !idOk(input.pane))) throw new HerdrError("invalid Herdr workspace/tab/pane id")
-  const runtime = resolveRuntime(input.runtime, input.defaultRuntime)
+  const runtime = resolveRuntime(input.runtime, input.defaultRuntime, input.runtimes)
   const launch = herdrKindLaunch(runtime, input.directory)
   const argv = interactiveArgv(runtime, input.directory)
   const id = crypto.randomUUID()

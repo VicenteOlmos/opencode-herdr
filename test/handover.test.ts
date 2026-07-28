@@ -73,6 +73,7 @@ test("createHandover uses herdr tab pool + agent start --kind", async () => {
       tab: "t",
       pane: "p",
       runtime: "cursor",
+      runtimes: ["cursor"],
       note: "continue the handover work",
       stateDir: join(root, "state", "opencode-herdr"),
       run,
