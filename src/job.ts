@@ -6,13 +6,14 @@ import { sanitize } from "./sanitize.js"
 export type Job = { id: string; dir: string; request: string; result: string }
 export type JobResultV1 = { schemaVersion: 1; jobId: string; targetId: string; status: "done" | "error" | "cancelled"; text?: string; usage?: { input?: number; output?: number }; nativeFinish?: string; delegatedTools: boolean; diagnostic?: string }
 
-export async function createJob(task: string, root: string): Promise<Job> {
+export async function createJob(task: string, root: string, extra: { effort?: string } = {}): Promise<Job> {
   const id = crypto.randomUUID()
   const base = resolve(root, `.opencode-herdr-${id}`)
   if (!base.startsWith(`${resolve(root)}${process.platform === "win32" ? "\\" : "/"}`)) throw new HerdrError("unsafe job path")
   await mkdir(base, { recursive: false, mode: 0o700 })
   const request = join(base, "request.json"), result = join(base, "result.json")
-  await writeFile(request, JSON.stringify({ schemaVersion: 1, id, task }), { mode: 0o600 })
+  const effort = typeof extra.effort === "string" && extra.effort.trim() ? extra.effort.trim() : undefined
+  await writeFile(request, JSON.stringify({ schemaVersion: 1, id, task, ...(effort ? { effort } : {}) }), { mode: 0o600 })
   return { id, dir: base, request, result }
 }
 function validate(value: unknown, job?: Job): JobResultV1 {

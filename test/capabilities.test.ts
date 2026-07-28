@@ -37,7 +37,7 @@ test("7.2 missing Herdr retains stale diagnostics but removes executable catalog
   expect(stale.targets).toEqual([])
   const tools: any = herdrTools(() => stale.targets, () => ({ execute: async () => { throw new Error("must not execute") } }) as any, undefined, () => stale.herdr)
   await expect(tools.herdr_capabilities.execute({}, {})).rejects.toThrow("unavailable")
-  await expect(tools.herdr_pane.execute({ target: "stale", task: "x" }, {})).rejects.toThrow("unavailable")
+  await expect(tools.herdr_pane.execute({ runtime: "stale", task: "x" }, {})).rejects.toThrow("unavailable")
   expect(() => createHerdr({ targets: stale.targets }).languageModel("stale")).toThrow("unavailable")
 })
 

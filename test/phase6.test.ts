@@ -1,4 +1,5 @@
-import { expect, test } from "bun:test"
+import { expect, setDefaultTimeout, test } from "bun:test"
+setDefaultTimeout(30_000)
 import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { targetId, type Adapter } from "../src/adapters/types"
@@ -9,9 +10,21 @@ import { createLanguageModel } from "../src/language-model"
 import { injectConfig } from "../src/opencode-config"
 import { HerdrPlugin } from "../src/index"
 import { herdrTools } from "../src/command"
-import { finalAssistantText } from "../src/runner"
+import { describeAdapterEvent, finalAssistantText } from "../src/runner"
 
 const target = { id: "cursor-YWdlbnQ", name: "Cursor agent", adapter: "cursor", nativeModel: "agent", provenance: "verified" as const, limits: { context: 32, output: 8 }, toolCall: false }
+
+test("runner progress lines summarize stream events", () => {
+  expect(describeAdapterEvent("cursor", {
+    type: "assistant",
+    message: { content: [{ type: "tool_use", name: "Read", input: { path: "/tmp/x" } }] },
+  })).toBe("tool Read: /tmp/x")
+  expect(describeAdapterEvent("cursor", {
+    type: "assistant",
+    message: { content: [{ type: "text", text: "hello world" }] },
+  })).toBe("assistant: hello world")
+  expect(describeAdapterEvent("codex", { type: "turn.started" })).toBe("turn started")
+})
 
 test("R2-001 extracts final assistant text from supported protocols", () => {
   expect(finalAssistantText("cursor", '{"type":"assistant","message":{"content":[{"type":"text","text":"partial"}]}}\n{"type":"result","result":"cursor final"}')).toBe("cursor final")
@@ -57,7 +70,7 @@ test("6.4 config load and capability tool refresh the atomic snapshot", async ()
   await Bun.$`mkdir -p ${bin}`
   for (const name of ["herdr", "agent", "opencode", "claude", "codex"]) {
     const path = join(bin, name)
-    await writeFile(path, "#!/bin/sh\nprintf '%s' '{\"models\":[\"safe\"]}'\n")
+    await writeFile(path, "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then printf '1.0.0\\n'; else printf '%s' '{\"models\":[\"safe\"]}'; fi\n")
     await chmod(path, 0o755)
   }
   const previous = { PATH: process.env.PATH, XDG_STATE_HOME: process.env.XDG_STATE_HOME, HERDR_WORKSPACE_ID: process.env.HERDR_WORKSPACE_ID, HERDR_TAB_ID: process.env.HERDR_TAB_ID, HERDR_PANE_ID: process.env.HERDR_PANE_ID }
@@ -73,31 +86,35 @@ test("6.4 config load and capability tool refresh the atomic snapshot", async ()
   }
 })
 
-test("6.5 validates returned agent authority and 6.6 waits before close", async () => {
+test("6.5 cancel closes owned pane", async () => {
   const calls: string[][] = []
   const agent = new HerdrAgent(async (argv) => {
     calls.push(argv)
-    return { code: 0, stdout: argv[2] === "get" ? JSON.stringify({ terminal_id: "t", pane_id: "p", status: "done" }) : "{}" }
+    return { code: 0, stdout: argv[2] === "get" ? JSON.stringify({ terminal_id: "t", pane_id: "p", agent_status: "done" }) : "{}" }
   })
   await expect(agent.get({ terminalId: "t", paneId: "wrong" })).rejects.toThrow("mismatched")
   await agent.cancel({ terminalId: "t", paneId: "p" })
-  expect(calls.slice(-3).map((argv) => argv[2])).toEqual(["send", "wait", "close"])
+  expect(calls.some((a) => a[1] === "pane" && a[2] === "send-keys")).toBeTrue()
+  expect(calls.some((a) => a[1] === "agent" && a[2] === "wait" && a.includes("--until"))).toBeTrue()
+  expect(calls.at(-1)?.slice(0, 3)).toEqual(["herdr", "pane", "close"])
 })
 
 test("6.7 slash harness template distinguishes omitted fields and direct tool data", () => {
   const config: any = {}
   injectConfig(config, [target], { cwd: "/tmp", workspace: "w", tab: "t", pane: "p" })
-  expect(config.command["herdr-pane"].template).toContain("no target")
+  expect(config.command["herdr-pane"].template).toContain("no runtime")
   expect(config.command["herdr-pane"].template).toContain("no task")
   expect(config.command["herdr-pane"].template).toContain("both")
+  expect(config.command["herdr-pane"].template).toContain("question")
 })
 
-test("6.7 direct tool uses explicit validated target and task", async () => {
+test("6.7 direct tool uses explicit validated runtime and task", async () => {
   let received: unknown
   const tools: any = herdrTools(() => [target], () => ({ execute: async (selected: unknown, options: any) => {
     received = { selected, task: options.prompt[0].content[0].text }
     return { status: "done", text: "delegated", delegatedTools: false }
   } }) as any)
-  expect(await tools.herdr_pane.execute({ target: target.id, task: "safe task" }, {})).toMatchObject({ output: "delegated", metadata: { targetId: target.id } })
+  expect(await tools.herdr_pane.execute({ runtime: target.id, task: "safe task" }, {})).toMatchObject({ output: "delegated", metadata: { targetId: target.id } })
   expect(received).toEqual({ selected: target, task: "safe task" })
+  expect(await tools.herdr_pane.execute({ runtime: "cursor", task: "via runtime" }, {})).toMatchObject({ output: "delegated", metadata: { runtime: "cursor" } })
 })

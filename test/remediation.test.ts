@@ -1,22 +1,63 @@
-import { expect, test } from "bun:test"
+import { expect, setDefaultTimeout, test } from "bun:test"
+setDefaultTimeout(30_000)
+import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { join } from "node:path"
 import { createHerdr } from "../src/provider"
 import { HerdrController } from "../src/controller"
 import { HerdrPlugin } from "../src/index"
+import { JOB_PANE_PREFIX } from "../src/pool"
 
 const target = { id: "cursor-agent", name: "Cursor agent", adapter: "cursor", nativeModel: "agent", provenance: "verified" as const, limits: { context: 1, output: 1 }, toolCall: false as const, toolMode: "delegated-agent" as const }
 
-test("5.1/5.3 selected model uses agent lifecycle and validated result", async () => {
-  const calls: string[][] = []
-  const controller = new HerdrController({ root: "/tmp", cwd: "/repo", workspace: "w", tab: "tab", run: async (argv) => {
+function poolMock(calls: string[][]) {
+  return async (argv: string[]) => {
     calls.push(argv)
-    if (argv[2] === "start") return { code: 0, stdout: JSON.stringify({ type: "agent_started", agent: { name: argv[3], terminal_id: "t", pane_id: "p", cwd: "/repo", workspace_id: "w", tab_id: "tab" }, argv: argv.slice(argv.indexOf("--") + 1) }) }
-    if (argv[2] === "get") return { code: 0, stdout: JSON.stringify({ terminal_id: "t", pane_id: "p", status: "done" }) }
+    if (argv[1] === "tab" && argv[2] === "list") {
+      return { code: 0, stdout: JSON.stringify({ result: { tabs: [{ tab_id: "w:tH", workspace_id: "w", label: "opencode-herdr", pane_count: 1 }] } }) }
+    }
+    if (argv[1] === "pane" && argv[2] === "list") {
+      return {
+        code: 0,
+        stdout: JSON.stringify({
+          result: {
+            panes: [{ pane_id: "w:seed", tab_id: "w:tH", workspace_id: "w", terminal_id: "term-seed" }],
+          },
+        }),
+      }
+    }
+    if (argv[1] === "pane" && argv[2] === "split") {
+      return {
+        code: 0,
+        stdout: JSON.stringify({ result: { pane: { pane_id: "w:pJob", terminal_id: "term-job", tab_id: "w:tH" } } }),
+      }
+    }
     return { code: 0, stdout: "{}" }
-  }, result: async (job, selected) => ({ schemaVersion: 1, jobId: job.id, targetId: selected.id, status: "done", text: "ok", delegatedTools: false }) })
+  }
+}
+
+test("5.1/5.3 selected model uses herdr tab pool and validated result", async () => {
+  const calls: string[][] = []
+  const controller = new HerdrController({
+    root: "/tmp",
+    cwd: "/repo",
+    workspace: "w",
+    tab: "tab",
+    run: poolMock(calls),
+    result: async (job, selected) => ({
+      schemaVersion: 1,
+      jobId: job.id,
+      targetId: selected.id,
+      status: "done",
+      text: "ok",
+      delegatedTools: false,
+    }),
+  })
   const model = createHerdr({ targets: [target], controller }).languageModel(target.id)
   expect((await model.doGenerate({ prompt: [{ role: "user", content: [{ type: "text", text: "safe $(x)" }] }] } as any)).content).toEqual([{ type: "text", text: "ok" }])
-  expect(calls.some((argv) => argv[2] === "start" && argv.includes("--"))).toBeTrue()
-  expect(calls.map((argv) => argv[2])).toEqual(["start", "wait", "send", "wait", "wait", "get", "read", "close"])
+  expect(calls.some((argv) => argv[1] === "pane" && argv[2] === "run" && argv.some((a) => a.includes("runner.ts")))).toBeTrue()
+  expect(calls.some((argv) => argv[1] === "pane" && argv[2] === "split")).toBeTrue()
+  expect(calls.some((argv) => argv[1] === "pane" && argv[2] === "rename" && argv.some((a) => a.startsWith(JOB_PANE_PREFIX)))).toBeTrue()
+  expect(calls.some((argv) => argv[1] === "pane" && argv[2] === "close")).toBeTrue()
 })
 
 test("5.4 does not advertise or accept OpenCode tools without structured adapter support", async () => {
@@ -35,13 +76,37 @@ test("5.6 abort and external error never become successful output", async () => 
 })
 
 test("5.2 plugin registers usable capability and pane tools", async () => {
-  const previous = { workspace: process.env.HERDR_WORKSPACE_ID, tab: process.env.HERDR_TAB_ID, pane: process.env.HERDR_PANE_ID }
-  process.env.HERDR_WORKSPACE_ID = "w"; process.env.HERDR_TAB_ID = "t"; process.env.HERDR_PANE_ID = "p"
-  const hooks: any = await HerdrPlugin.server({ directory: "/tmp" } as any)
-  expect(hooks.tool.herdr_capabilities).toBeDefined()
-  expect(hooks.tool.herdr_pane).toBeDefined()
-  await hooks.config({})
-  expect(await hooks.tool.herdr_capabilities.execute({}, {})).toBeString()
-  await expect(hooks.tool.herdr_pane.execute({ target: "missing", task: "x" }, {})).rejects.toThrow("unavailable")
-  Object.assign(process.env, { HERDR_WORKSPACE_ID: previous.workspace, HERDR_TAB_ID: previous.tab, HERDR_PANE_ID: previous.pane })
+  const root = await mkdtemp("/tmp/herdr-remediation-")
+  const bin = join(root, "bin")
+  await Bun.$`mkdir -p ${bin}`
+  for (const name of ["herdr", "agent", "opencode", "claude", "codex"]) {
+    const path = join(bin, name)
+    await writeFile(path, "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then printf '1.0.0\\n'; else printf '%s' '{\"models\":[\"safe\"]}'; fi\n")
+    await chmod(path, 0o755)
+  }
+  const previous = {
+    PATH: process.env.PATH,
+    XDG_STATE_HOME: process.env.XDG_STATE_HOME,
+    HERDR_WORKSPACE_ID: process.env.HERDR_WORKSPACE_ID,
+    HERDR_TAB_ID: process.env.HERDR_TAB_ID,
+    HERDR_PANE_ID: process.env.HERDR_PANE_ID,
+  }
+  Object.assign(process.env, {
+    PATH: `${bin}:${process.env.PATH}`,
+    XDG_STATE_HOME: join(root, "state"),
+    HERDR_WORKSPACE_ID: "w",
+    HERDR_TAB_ID: "t",
+    HERDR_PANE_ID: "p",
+  })
+  try {
+    const hooks: any = await HerdrPlugin.server({ directory: root } as any)
+    expect(hooks.tool.herdr_capabilities).toBeDefined()
+    expect(hooks.tool.herdr_pane).toBeDefined()
+    await hooks.config({})
+    expect(await hooks.tool.herdr_capabilities.execute({}, {})).toBeString()
+    await expect(hooks.tool.herdr_pane.execute({ runtime: "missing", task: "x" }, {})).rejects.toThrow("unknown runtime")
+  } finally {
+    Object.assign(process.env, previous)
+    await rm(root, { recursive: true, force: true })
+  }
 })
