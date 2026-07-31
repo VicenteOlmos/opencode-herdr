@@ -14,6 +14,9 @@ export type StartKindInput = {
   timeoutMs?: number
 }
 
+export type ReportedAgentState = "idle" | "working" | "blocked" | "unknown"
+export type PaneAgentIdentity = { paneId: string; source: "opencode-herdr"; agent: string }
+
 export type StartJobInput = {
   jobId: string
   cwd: string
@@ -21,6 +24,15 @@ export type StartJobInput = {
   argv: string[]
   env?: Record<string, string>
   pool: HerdrPool
+  closePane?: boolean
+}
+
+export function paneAgentIdentity(agent: OwnedAgent, jobId?: string): PaneAgentIdentity {
+  return {
+    paneId: agent.paneId,
+    source: "opencode-herdr",
+    agent: agent.name ?? herdrAgentName(jobId ?? agent.jobId ?? "job"),
+  }
 }
 
 /** Herdr control-plane client (API protocol 17+). */
@@ -66,7 +78,7 @@ export class HerdrAgent {
     })
     const result = await this.run(["herdr", "pane", "run", record.paneId, ...input.argv])
     if (result.code !== 0) {
-      await input.pool.release(input.jobId, { status: "error" })
+      await input.pool.release(input.jobId, { status: "error", closePane: input.closePane !== false })
       throw new HerdrError("pane run failed")
     }
     return {
@@ -77,6 +89,27 @@ export class HerdrAgent {
       name: herdrAgentName(input.jobId),
       record,
     }
+  }
+
+  async reportAgent(identity: PaneAgentIdentity, state: ReportedAgentState): Promise<void> {
+    await this.run([
+      "herdr", "pane", "report-agent", identity.paneId,
+      "--source", identity.source,
+      "--agent", identity.agent,
+      "--state", state,
+    ]).catch(() => undefined)
+  }
+
+  async releaseAgent(identity: PaneAgentIdentity): Promise<void> {
+    await this.run([
+      "herdr", "pane", "release-agent", identity.paneId,
+      "--source", identity.source,
+      "--agent", identity.agent,
+    ]).catch(() => undefined)
+  }
+
+  async interrupt(agent: OwnedAgent): Promise<void> {
+    await this.run(["herdr", "pane", "send-keys", agent.paneId, "ctrl+c"]).catch(() => undefined)
   }
 
   async cancel(agent: OwnedAgent, pool?: HerdrPool, opts: { closePane?: boolean } = {}) {

@@ -1,11 +1,13 @@
 import type { LanguageModelV3CallOptions } from "@ai-sdk/provider"
 import type { Target } from "./adapters/types.js"
 import { effortFromCallOptions } from "./effort.js"
-import { HerdrAgent, type Run } from "./herdr.js"
+import { HerdrAgent, paneAgentIdentity, type PaneAgentIdentity, type Run } from "./herdr.js"
 import { createJob, readResult, removeJob, type Job, type JobResultV1 } from "./job.js"
 import { taskFromPrompt } from "./messages.js"
 import { HerdrPool } from "./pool.js"
 import { AbortError, HerdrError } from "./errors.js"
+
+export type TerminalOutcome = "done" | "error" | "cancelled"
 
 export type ControllerOptions = {
   root?: string
@@ -24,6 +26,13 @@ export type ControllerOptions = {
   keepJobs?: boolean
 }
 
+/** First terminal write wins; used by controller execute and tests. */
+export function latchTerminal(terminal: { value?: TerminalOutcome }, candidate: TerminalOutcome): boolean {
+  if (terminal.value !== undefined) return false
+  terminal.value = candidate
+  return true
+}
+
 export class HerdrController {
   private readonly agent: HerdrAgent
   private readonly pool: HerdrPool
@@ -38,15 +47,43 @@ export class HerdrController {
     const effort = effortFromCallOptions(options)
     const job = await createJob(taskFromPrompt(options.prompt), this.options.root ?? "/tmp", { effort })
     const closePane = !this.options.keepPanes
-    let owned: { terminalId: string; paneId: string; jobId?: string } | undefined
-    const abort = async () => {
-      if (owned) {
-        await this.agent.cancel(owned, this.pool, { closePane })
-        owned = undefined
-      }
-      if (!this.options.keepJobs) await removeJob(job)
+    let owned: { terminalId: string; paneId: string; jobId?: string; name?: string } | undefined
+    const terminal = { value: undefined as TerminalOutcome | undefined }
+    let finalized = false
+
+    const identity = (): PaneAgentIdentity | undefined => {
+      if (!owned) return undefined
+      return paneAgentIdentity(owned, job.id)
     }
-    const onAbort = () => { void abort() }
+
+    const finalize = async () => {
+      if (finalized) return
+      finalized = true
+      const id = identity()
+      const outcome = terminal.value ?? "error"
+      if (id) {
+        await this.agent.reportAgent(id, "idle").catch(() => undefined)
+        await this.agent.releaseAgent(id).catch(() => undefined)
+      }
+      if (owned?.jobId) {
+        await this.pool.release(owned.jobId, { status: outcome, closePane }).catch(() => undefined)
+      } else if (owned && closePane) {
+        await this.agent.close(owned).catch(() => undefined)
+      }
+      owned = undefined
+      if (!this.options.keepJobs) await removeJob(job).catch(() => undefined)
+      else if (id) console.error(`[herdr] keepJobs: left ${job.dir} (pane ${id.paneId})`)
+    }
+
+    const interrupt = async () => {
+      if (!owned) return
+      await this.agent.interrupt(owned).catch(() => undefined)
+    }
+
+    const onAbort = () => {
+      latchTerminal(terminal, "cancelled")
+      void interrupt()
+    }
     options.abortSignal?.addEventListener("abort", onAbort, { once: true })
     try {
       const runner = [
@@ -64,24 +101,33 @@ export class HerdrController {
         argv: runner,
         env: { OPENCODE_HERDR_JOB: job.dir },
         pool: this.pool,
+        closePane,
       })
-      const result = await this.waitForResult(job, target, options.abortSignal)
-      return result
-    } catch (error) {
-      if (options.abortSignal?.aborted || error instanceof AbortError) {
-        await abort()
+      const id = identity()!
+      await this.agent.reportAgent(id, "working").catch(() => undefined)
+      if (options.abortSignal?.aborted) {
+        latchTerminal(terminal, "cancelled")
         throw new AbortError()
       }
+      const result = await this.waitForResult(job, target, options.abortSignal)
+      if (result.status === "done") latchTerminal(terminal, "done")
+      else if (result.status === "cancelled") latchTerminal(terminal, "cancelled")
+      else latchTerminal(terminal, "error")
+      return result
+    } catch (error) {
+      if (options.abortSignal?.aborted) {
+        latchTerminal(terminal, "cancelled")
+        throw new AbortError()
+      }
+      if (error instanceof AbortError) {
+        latchTerminal(terminal, "cancelled")
+        throw error
+      }
+      latchTerminal(terminal, "error")
       throw error
     } finally {
       options.abortSignal?.removeEventListener("abort", onAbort)
-      if (owned?.jobId) {
-        await this.pool.release(owned.jobId, { status: "done", closePane }).catch(() => undefined)
-      } else if (owned && closePane) {
-        await this.agent.close(owned).catch(() => undefined)
-      }
-      if (!this.options.keepJobs) await removeJob(job)
-      else console.error(`[herdr] keepJobs: left ${job.dir} (pane ${owned?.paneId ?? "n/a"})`)
+      await finalize()
     }
   }
 
@@ -96,7 +142,8 @@ export class HerdrController {
           : await readResult(job, target.id)
         if (result.targetId !== target.id) throw new HerdrError("result target mismatch")
         return result
-      } catch {
+      } catch (error) {
+        if (error instanceof AbortError) throw error
         await Bun.sleep(200)
       }
     }

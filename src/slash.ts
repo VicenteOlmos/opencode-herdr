@@ -371,12 +371,3 @@ export async function handleHerdrDelete(deps: SlashDeps, output: { parts: unknow
     })
   }
 }
-
-export function formatPresenceToast(targets: Target[]) {
-  const n = targets.length
-  return {
-    title: "Herdr ready",
-    message: `${n} target${n === 1 ? "" : "s"} · /herdr-status · /herdr-test · /herdr-delete`,
-    variant: (n > 0 ? "success" : "warning") as "success" | "warning",
-  }
-}

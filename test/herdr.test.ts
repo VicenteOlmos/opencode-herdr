@@ -111,6 +111,95 @@ test("pool rejects when tab is full", async () => {
   expect(splits).toBe(0)
 })
 
+test("reportAgent and releaseAgent use typed pane argv and swallow CLI failure", async () => {
+  const calls: string[][] = []
+  const agent = new HerdrAgent(async (argv) => {
+    calls.push(argv)
+    if (argv[2] === "report-agent" || argv[2] === "release-agent") return { code: 1, stdout: "", stderr: "unsupported" }
+    return { code: 0, stdout: "{}" }
+  })
+  const identity = { paneId: "w:p1", source: "opencode-herdr" as const, agent: "oh-job" }
+  for (const state of ["idle", "working", "blocked", "unknown"] as const) {
+    await agent.reportAgent(identity, state)
+    expect(calls.at(-1)).toEqual(["herdr", "pane", "report-agent", "w:p1", "--source", "opencode-herdr", "--agent", "oh-job", "--state", state])
+  }
+  await agent.releaseAgent(identity)
+  expect(calls.at(-1)).toEqual(["herdr", "pane", "release-agent", "w:p1", "--source", "opencode-herdr", "--agent", "oh-job"])
+})
+
+test("startJob launch failure before return reports no working authority", async () => {
+  const calls: string[][] = []
+  const run = async (argv: string[]) => {
+    calls.push(argv)
+    if (argv[1] === "tab" && argv[2] === "list") {
+      return { code: 0, stdout: JSON.stringify({ result: { tabs: [{ tab_id: "w:tH", workspace_id: "w", label: "opencode-herdr" }] } }) }
+    }
+    if (argv[1] === "pane" && argv[2] === "list") {
+      return { code: 0, stdout: JSON.stringify({ result: { panes: [{ pane_id: "w:seed", tab_id: "w:tH", workspace_id: "w", terminal_id: "term-seed" }] } }) }
+    }
+    if (argv[1] === "pane" && argv[2] === "split") {
+      return { code: 0, stdout: JSON.stringify({ result: { pane: { pane_id: "w:pNew", terminal_id: "term-new", tab_id: "w:tH" } } }) }
+    }
+    if (argv[1] === "pane" && argv[2] === "run") return { code: 1, stdout: "", stderr: "run failed" }
+    if (argv[1] === "pane" && argv[2] === "close") throw new Error("cleanup must not mask launch error")
+    return { code: 0, stdout: "{}" }
+  }
+  const pool = new HerdrPool({ run })
+  const agent = new HerdrAgent(run)
+  await expect(agent.startJob({
+    jobId: "11111111-2222-3333-4444-555555555555",
+    cwd: "/repo",
+    workspace: "w",
+    argv: ["bun", "runner.ts"],
+    pool,
+  })).rejects.toThrow("pane run failed")
+  expect(calls.some((c) => c[2] === "report-agent")).toBeFalse()
+  expect(pool.get("11111111-2222-3333-4444-555555555555")).toBeUndefined()
+})
+
+test("startJob pane run failure releases pool once and honors closePane", async () => {
+  const calls: string[][] = []
+  const run = async (argv: string[]) => {
+    calls.push(argv)
+    if (argv[1] === "tab" && argv[2] === "list") {
+      return { code: 0, stdout: JSON.stringify({ result: { tabs: [{ tab_id: "w:tH", workspace_id: "w", label: "opencode-herdr" }] } }) }
+    }
+    if (argv[1] === "pane" && argv[2] === "list") {
+      return { code: 0, stdout: JSON.stringify({ result: { panes: [{ pane_id: "w:seed", tab_id: "w:tH", workspace_id: "w", terminal_id: "term-seed" }] } }) }
+    }
+    if (argv[1] === "pane" && argv[2] === "split") {
+      return { code: 0, stdout: JSON.stringify({ result: { pane: { pane_id: "w:pNew", terminal_id: "term-new", tab_id: "w:tH" } } }) }
+    }
+    if (argv[1] === "pane" && argv[2] === "run") return { code: 1, stdout: "", stderr: "run failed" }
+    return { code: 0, stdout: "{}" }
+  }
+  const pool = new HerdrPool({ run })
+  const agent = new HerdrAgent(run)
+  await expect(agent.startJob({
+    jobId: "job-keep",
+    cwd: "/repo",
+    workspace: "w",
+    argv: ["bun", "runner.ts"],
+    pool,
+    closePane: false,
+  })).rejects.toThrow("pane run failed")
+  expect(calls.filter((c) => c[1] === "pane" && c[2] === "close")).toHaveLength(0)
+  expect(pool.get("job-keep")).toBeUndefined()
+
+  calls.length = 0
+  const poolClose = new HerdrPool({ run })
+  await expect(agent.startJob({
+    jobId: "job-close",
+    cwd: "/repo",
+    workspace: "w",
+    argv: ["bun", "runner.ts"],
+    pool: poolClose,
+    closePane: true,
+  })).rejects.toThrow("pane run failed")
+  expect(calls.some((c) => c[1] === "pane" && c[2] === "close" && c[3] === "w:pNew")).toBeTrue()
+  expect(poolClose.get("job-close")).toBeUndefined()
+})
+
 test("cancel uses send-keys and wait --until", async () => {
   const calls: string[][] = []
   const agent = new HerdrAgent(async (argv) => {

@@ -11,6 +11,9 @@ import { injectConfig } from "../src/opencode-config"
 import { HerdrPlugin } from "../src/index"
 import { herdrTools } from "../src/command"
 import { describeAdapterEvent, finalAssistantText } from "../src/runner"
+import { HerdrController, latchTerminal } from "../src/controller"
+import { HerdrPool } from "../src/pool"
+import { AbortError } from "../src/errors"
 
 const target = { id: "cursor-YWdlbnQ", name: "Cursor agent", adapter: "cursor", nativeModel: "agent", provenance: "verified" as const, limits: { context: 32, output: 8 }, toolCall: false }
 
@@ -117,4 +120,113 @@ test("6.7 direct tool uses explicit validated runtime and task", async () => {
   expect(await tools.herdr_pane.execute({ runtime: target.id, task: "safe task" }, {})).toMatchObject({ output: "delegated", metadata: { targetId: target.id } })
   expect(received).toEqual({ selected: target, task: "safe task" })
   expect(await tools.herdr_pane.execute({ runtime: "cursor", task: "via runtime" }, {})).toMatchObject({ output: "delegated", metadata: { runtime: "cursor" } })
+})
+
+test("6.8 first terminal latch wins under held cleanup", async () => {
+  const terminal = { value: undefined as "done" | "error" | "cancelled" | undefined }
+  expect(latchTerminal(terminal, "cancelled")).toBeTrue()
+  expect(latchTerminal(terminal, "error")).toBeFalse()
+  expect(latchTerminal(terminal, "done")).toBeFalse()
+  expect(terminal.value).toBe("cancelled")
+
+  const successFirst = { value: undefined as "done" | "error" | "cancelled" | undefined }
+  expect(latchTerminal(successFirst, "done")).toBeTrue()
+  expect(latchTerminal(successFirst, "cancelled")).toBeFalse()
+  expect(successFirst.value).toBe("done")
+})
+
+test("6.9 provider and herdr_pane share controller lifecycle order", async () => {
+  const run = async (argv: string[]) => {
+    if (argv[1] === "tab" && argv[2] === "list") {
+      return { code: 0, stdout: JSON.stringify({ result: { tabs: [{ tab_id: "w:tH", workspace_id: "w", label: "opencode-herdr" }] } }) }
+    }
+    if (argv[1] === "pane" && argv[2] === "list") {
+      return { code: 0, stdout: JSON.stringify({ result: { panes: [{ pane_id: "w:seed", tab_id: "w:tH", workspace_id: "w", terminal_id: "term-seed" }] } }) }
+    }
+    if (argv[1] === "pane" && argv[2] === "split") {
+      return { code: 0, stdout: JSON.stringify({ result: { pane: { pane_id: "w:pJob", terminal_id: "term-job", tab_id: "w:tH" } } }) }
+    }
+    return { code: 0, stdout: "{}" }
+  }
+  const providerCalls: string[][] = []
+  const providerController = new HerdrController({
+    root: await mkdtemp("/tmp/herdr-provider-"),
+    cwd: "/repo",
+    workspace: "w",
+    run: async (argv) => { providerCalls.push(argv); return run(argv) },
+    pool: new HerdrPool({ run: async (argv) => { providerCalls.push(argv); return run(argv) } }),
+    result: async (job, selected) => ({
+      schemaVersion: 1,
+      jobId: job.id,
+      targetId: selected.id,
+      status: "done",
+      text: "ok",
+      delegatedTools: false,
+    }),
+  })
+  const model = createLanguageModel(target, (input) => providerController.execute(target, input))
+  await model.doGenerate({ prompt: [{ role: "user", content: [{ type: "text", text: "via provider" }] }] } as any)
+  const providerPhases = providerCalls
+    .filter((argv) => argv[1] === "pane" && ["report-agent", "release-agent"].includes(argv[2] ?? ""))
+    .map((argv) => argv[2])
+
+  const toolCalls: string[][] = []
+  const toolController = new HerdrController({
+    root: await mkdtemp("/tmp/herdr-tool-"),
+    cwd: "/repo",
+    workspace: "w",
+    run: async (argv) => { toolCalls.push(argv); return run(argv) },
+    pool: new HerdrPool({ run: async (argv) => { toolCalls.push(argv); return run(argv) } }),
+    result: async (job, selected) => ({
+      schemaVersion: 1,
+      jobId: job.id,
+      targetId: selected.id,
+      status: "done",
+      text: "ok",
+      delegatedTools: false,
+    }),
+  })
+  const tools: any = herdrTools(() => [target], () => toolController as any)
+  await tools.herdr_pane.execute({ runtime: target.id, task: "via tool" }, {})
+  const toolPhases = toolCalls
+    .filter((argv) => argv[1] === "pane" && ["report-agent", "release-agent"].includes(argv[2] ?? ""))
+    .map((argv) => argv[2])
+  expect(providerPhases).toEqual(["report-agent", "report-agent", "release-agent"])
+  expect(toolPhases).toEqual(providerPhases)
+})
+
+test("6.10 keepPanes retains pane but releases authority", async () => {
+  const calls: string[][] = []
+  const run = async (argv: string[]) => {
+    calls.push(argv)
+    if (argv[1] === "tab" && argv[2] === "list") {
+      return { code: 0, stdout: JSON.stringify({ result: { tabs: [{ tab_id: "w:tH", workspace_id: "w", label: "opencode-herdr" }] } }) }
+    }
+    if (argv[1] === "pane" && argv[2] === "list") {
+      return { code: 0, stdout: JSON.stringify({ result: { panes: [{ pane_id: "w:seed", tab_id: "w:tH", workspace_id: "w", terminal_id: "term-seed" }] } }) }
+    }
+    if (argv[1] === "pane" && argv[2] === "split") {
+      return { code: 0, stdout: JSON.stringify({ result: { pane: { pane_id: "w:pJob", terminal_id: "term-job", tab_id: "w:tH" } } }) }
+    }
+    return { code: 0, stdout: "{}" }
+  }
+  const controller = new HerdrController({
+    root: await mkdtemp("/tmp/herdr-keep-auth-"),
+    cwd: "/repo",
+    workspace: "w",
+    keepPanes: true,
+    run,
+    pool: new HerdrPool({ run }),
+    result: async (job, selected) => ({
+      schemaVersion: 1,
+      jobId: job.id,
+      targetId: selected.id,
+      status: "done",
+      text: "ok",
+      delegatedTools: false,
+    }),
+  })
+  await controller.execute(target, { prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }] } as any)
+  expect(calls.some((argv) => argv[1] === "pane" && argv[2] === "close")).toBeFalse()
+  expect(calls.some((argv) => argv[2] === "release-agent")).toBeTrue()
 })

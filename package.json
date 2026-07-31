@@ -1,6 +1,6 @@
 {
   "name": "opencode-herdr",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Route OpenCode agents through Herdr panes as herdr/<adapter>/<model> (Cursor, Claude, Codex, OpenCode)",
   "license": "MIT",
   "author": "Vicente Olmos",

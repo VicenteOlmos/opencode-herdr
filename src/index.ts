@@ -10,7 +10,6 @@ import { HerdrPool } from "./pool.js"
 import { resolvePluginOptions } from "./plugin-options.js"
 import { installHerdrSkill } from "./skill-install.js"
 import {
-  formatPresenceToast,
   handleHerdrDelete,
   handleHerdrStatus,
   handleHerdrTest,
@@ -31,7 +30,6 @@ const server: Plugin = async (context, options) => {
   let targets: import("./adapters/types.js").Target[] = []
   let herdr = false
   let snapshot: Snapshot = { schemaVersion: 1, createdAt: "", herdr: false, runtimes: [], targets: [] }
-  const toastedSessions = new Set<string>()
   const flags = resolvePluginOptions(options as Record<string, unknown> | undefined)
   const defaultRuntime = flags.handoverDefault
   const runtimeCtx = () => {
@@ -143,18 +141,6 @@ const server: Plugin = async (context, options) => {
       void pending.then(applySnapshot).catch(() => undefined)
     },
     tool: herdrTools(() => targets, controller, async () => { await refresh() }, () => herdr),
-    async event(input) {
-      if (input.event.type === "session.deleted") {
-        toastedSessions.delete(input.event.properties.info.id)
-        return
-      }
-      if (input.event.type !== "session.created") return
-      const sessionId = input.event.properties.info.id
-      if (toastedSessions.has(sessionId)) return
-      toastedSessions.add(sessionId)
-      const toast = formatPresenceToast(targets)
-      await showToast({ ...toast, duration: 8_000 })
-    },
     async "command.execute.before"(input, output) {
       if (input.command === "herdr-status") {
         await handleHerdrStatus(slashDeps(input.sessionID), output, showToast)
