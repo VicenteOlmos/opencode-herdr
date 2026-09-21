@@ -27,6 +27,9 @@ jobs:
   publish:
     name: npm
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
@@ -49,6 +52,12 @@ jobs:
         with:
           node-version: "24"
           package-manager-cache: false
-      - run: npm publish --access public
+      - name: Publish
         env:
           NODE_AUTH_TOKEN: ""
+        run: |
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+            echo "ACTIONS_ID_TOKEN_REQUEST_URL missing; id-token: write was not granted"
+            exit 1
+          fi
+          npm publish --access public --loglevel verbose
