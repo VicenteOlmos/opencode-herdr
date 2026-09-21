@@ -43,9 +43,12 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun test
+      # Do not set registry-url: setup-node then injects a dummy NODE_AUTH_TOKEN
+      # and npm uses that instead of OIDC trusted publishing.
       - uses: actions/setup-node@v6
         with:
           node-version: "24"
-          registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
       - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ""
