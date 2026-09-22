@@ -58,7 +58,7 @@
   },
   "dependencies": {
     "@ai-sdk/provider": "4.0.14",
-    "@opencode-ai/plugin": "1.18.30"
+    "@opencode-ai/plugin": "1.18.31"
   },
   "devDependencies": {
     "@types/bun": "1.4.2",
