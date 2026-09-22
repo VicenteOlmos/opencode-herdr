@@ -48,7 +48,7 @@ jobs:
       - run: bun test
       # Do not set registry-url: setup-node then injects a dummy NODE_AUTH_TOKEN
       # and npm uses that instead of OIDC trusted publishing.
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           package-manager-cache: false
