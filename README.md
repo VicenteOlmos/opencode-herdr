@@ -1,6 +1,6 @@
 # opencode-herdr
 
-> **V2 migration status:** This branch targets the published OpenCode 2.0 beta contracts. Native server loading, provider/model catalog registration, concurrent fake-adapter generation, and native TUI setup, callbacks, feedback, and cleanup are verified against beta `0.0.0-beta-17823`. Physical keyboard input, real provider generation, and clean published-package installation remain unverified. This is not a production-ready release.
+> **V2 migration status:** This branch targets the published OpenCode 2.0 beta contracts. Native server loading, provider/model catalog registration, concurrent fake-adapter generation, native TUI setup/callbacks/feedback/cleanup, and clean tarball installation (including the npm launcher and automatic companion discovery) are verified against beta `0.0.0-beta-17823`. Compatibility is scoped to that runtime. Physical keyboard input, real provider generation, and the default runtime package downloader remain unverified. These V2 changes are not published yet.
 
 [![npm](https://img.shields.io/npm/v/opencode-herdr.svg)](https://www.npmjs.com/package/opencode-herdr)
 [![license](https://img.shields.io/npm/l/opencode-herdr.svg)](./LICENSE)
