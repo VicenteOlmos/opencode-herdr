@@ -217,6 +217,7 @@ esac
     assert.ok(!failedPlugin, `OpenCode ${runtimeVersion} reported the configured plugin as failed: ${safeError ?? "no error detail"}`)
     assert.ok(activePlugin,
       `timed out waiting for exact beta plugin id opencode-herdr to become active (45s); plugin data=${JSON.stringify(plugin?.data ?? []).replaceAll(pluginEntrypoint, "[plugin entrypoint]").replaceAll(fixture, "[workspace]")}; logs=${logs.replaceAll(serverPassword, "[redacted]").slice(-2_000)}`)
+    assert.equal(activePlugin.tui, true, "native plugin registry did not report its declared TUI companion")
 
     const providers = await getJson(apiBase, "/api/provider", authorization, fixture) as any
     const models = await getJson(apiBase, "/api/model", authorization, fixture) as any
@@ -228,7 +229,7 @@ esac
     assert.ok(herdrModel, "native model catalog did not contain Herdr cursor/agent")
     assert.doesNotMatch(await readFile(fakeLog, "utf8"), /opencode:run/)
     console.log(`PASS OpenCode ${runtimeVersion}: active plugin and Herdr provider/model catalog for the requested location`)
-    console.log("PASS no model generation ran; local TUI command behavior is outside this server smoke")
+    console.log("PASS no model/adapter generation command ran; mechanical commands are TUI-local and are not asserted on the server")
   } finally {
     server.kill("SIGTERM")
     const exited = await Promise.race([server.exited.then(() => true), Bun.sleep(5_000).then(() => false)])

@@ -7,6 +7,7 @@ describe("OpenCode V2 server plugin contract", () => {
   test("exports the native setup entrypoint", () => {
     expect(typeof HerdrPlugin.setup).toBe("function")
     expect("server" in HerdrPlugin).toBeFalse()
+    expect(HerdrPlugin.tui).toBeTrue()
   })
 
   test("applies effort overlays only to targets advertising efforts", () => {
