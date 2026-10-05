@@ -47,6 +47,7 @@
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit",
     "smoke": "bun run scripts/smoke.ts",
+    "smoke:v2": "bun run scripts/smoke-v2.ts",
     "pack:check": "npm pack --dry-run",
     "publish:npm": "bash scripts/publish.sh"
   },
@@ -55,7 +56,7 @@
   },
   "dependencies": {
     "@ai-sdk/provider": "3.0.8",
-    "@opencode/plugin": "2.0.22"
+    "@opencode-ai/plugin": "0.0.0-beta-17823"
   },
   "devDependencies": {
     "@types/bun": "1.4.2",

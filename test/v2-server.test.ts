@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { HerdrPlugin } from "../src/index.js"
-import { targetsToProviderModels } from "../src/opencode-config.js"
+import { herdrPackageNpm, targetsToProviderModels } from "../src/opencode-config.js"
 import { createV2Context } from "./v2-context.js"
 
 describe("OpenCode V2 server plugin contract", () => {
@@ -33,63 +33,99 @@ describe("OpenCode V2 server plugin contract", () => {
     expect(models[1]?.variants).toEqual([])
   })
 
-  test("registers provider models, AI SDK model, tools, commands, and agent routing", async () => {
+  test("registers native provider models, tools, and agent routing", async () => {
     const { registrations, target, cleanup } = await createV2Context(HerdrPlugin)
     try {
       const provider = registrations.providers[0] as any
 
-      expect(provider.info.id).toBe("herdr")
-      expect(provider.info.package).toBe("opencode-herdr")
-      expect(provider.models[0].id).toBe("cursor/agent")
-      expect(provider.models[0].variants).toEqual([
+      expect(provider.id).toBe("herdr")
+      expect(provider.package).toBe(`aisdk:${herdrPackageNpm()}`)
+      const model = registrations.models.get("cursor/agent")
+      expect(model.id).toBe("cursor/agent")
+      expect(model.variants).toEqual([
         { id: "low", settings: { effort: "low" } },
         { id: "high", settings: { effort: "high" } },
       ])
-      expect(provider.models[0].capabilities.tools).toBeTrue()
+      expect(model.capabilities.tools).toBeTrue()
       expect(registrations.tools.map((tool: any) => tool.name)).toEqual(["herdr_capabilities", "herdr_pane"])
-      expect(registrations.commands.map((command: any) => command.name)).toEqual([
-        "herdr-pane", "herdr-handover", "herdr-status", "herdr-test", "herdr-delete",
-      ])
+      expect(registrations.commands).toEqual([])
       expect(registrations.agents.get("build")?.model).toEqual({
         providerID: "herdr",
         id: "cursor/agent",
         variant: "high",
       })
 
-      const sdkEvent: { model: { providerID: string; id: string }; sdk?: { languageModel: (id: string) => unknown } } = {
-        model: { providerID: "herdr", id: "cursor/agent" },
-      }
-      registrations.sdk.forEach((hook) => hook(sdkEvent))
-      const languageEvent: { model: { providerID: string; id: string; modelID: string }; options: { effort: string }; language?: { specificationVersion: string; modelId: string } } = {
-        model: { ...sdkEvent.model, id: "catalog-alias", modelID: "cursor/agent" },
-        options: { effort: "high" },
-      }
-      registrations.language.forEach((hook) => hook(languageEvent))
-      expect(typeof sdkEvent.sdk?.languageModel).toBe("function")
-      expect(languageEvent.language?.specificationVersion).toBe("v3")
-      expect(languageEvent.language?.modelId).toBe("herdr/cursor/agent")
+      expect(registrations.sdk).toHaveLength(1)
+      expect(registrations.language).toHaveLength(1)
       expect(target.id).toBe("herdr/cursor/agent")
-
-      const unrelatedEvent: typeof languageEvent = {
-        model: { ...languageEvent.model, providerID: "openai" },
-        options: { effort: "high" },
-      }
-      registrations.language.forEach((hook) => hook(unrelatedEvent))
-      expect(unrelatedEvent.language).toBeUndefined()
     } finally {
       await cleanup()
     }
   })
 
-  test("propagates synthetic feedback failures from mechanical commands", async () => {
-    const { registrations, cleanup } = await createV2Context(HerdrPlugin, {
-      syntheticError: new Error("synthetic transport failed"),
-    })
+  test("takes over the beta AISDK provider by its stripped package name", async () => {
+    const { registrations, cleanup } = await createV2Context(HerdrPlugin)
     try {
-      const status = registrations.commands.find((command: any) => command.name === "herdr-status") as any
-      await expect(status.execute({ sessionID: "session" })).rejects.toThrow("synthetic transport failed")
+      const hook = registrations.sdk[0]
+      const herdr = {
+        package: herdrPackageNpm(),
+        model: { id: "cursor/agent", modelID: "cursor/agent", providerID: "herdr" },
+        options: {},
+        sdk: undefined as unknown,
+      }
+      const unrelated = {
+        package: "@ai-sdk/openai",
+        model: { id: "gpt-4.1", modelID: "gpt-4.1", providerID: "openai" },
+        options: {},
+        sdk: undefined as unknown,
+      }
+
+      hook?.(herdr)
+      hook?.(unrelated)
+
+      expect((herdr.sdk as { languageModel?: unknown } | undefined)?.languageModel).toBeFunction()
+      expect(unrelated.sdk).toBeUndefined()
+
+      const languageHook = registrations.language[0]
+      const language = {
+        model: { id: "cursor/agent", modelID: "cursor/agent", providerID: "herdr" },
+        sdk: herdr.sdk,
+        options: { effort: "high" },
+        language: undefined as unknown,
+      }
+      languageHook?.(language)
+      expect((language.language as { modelId?: unknown } | undefined)?.modelId).toBe("herdr/cursor/agent")
     } finally {
       await cleanup()
+    }
+  })
+
+  test("does not advertise mechanical slash callbacks as server commands", async () => {
+    const { registrations, cleanup } = await createV2Context(HerdrPlugin)
+    try { expect(registrations.commands).toEqual([]) } finally { await cleanup() }
+  })
+
+  test("binds each Herdr model request to its own session location", async () => {
+    const context = await createV2Context(HerdrPlugin, {
+      sessionDirectories: {
+        "session-one": "/workspaces/one",
+        "session-two": "/workspaces/two",
+      },
+    })
+    try {
+      const hook = context.registrations.sessionHooks.find((registration) => registration.name === "model.request")?.callback
+      expect(hook).toBeFunction()
+      const originalHeaders: Record<string, string> = { "X-OpenCode-Herdr-Directory": "/untrusted", "x-opencode-herdr-directory": "/also-untrusted", authorization: "safe" }
+      const one = { sessionID: "session-one", model: { providerID: "herdr" }, headers: originalHeaders }
+      const two = { sessionID: "session-two", model: { providerID: "herdr" }, headers: {} as Record<string, string> }
+      const unrelated = { sessionID: "session-one", model: { providerID: "openai" }, headers: {} as Record<string, string> }
+      await Promise.all([hook!(one), hook!(two), hook!(unrelated)])
+      expect(one.headers).toEqual({ "x-opencode-herdr-directory": "/workspaces/one", authorization: "safe" })
+      expect(originalHeaders).toEqual({ "X-OpenCode-Herdr-Directory": "/untrusted", "x-opencode-herdr-directory": "/also-untrusted", authorization: "safe" })
+      expect(two.headers["x-opencode-herdr-directory"]).toBe("/workspaces/two")
+      expect(unrelated.headers).toEqual({})
+    } finally {
+      await context.cleanup()
     }
   })
 
@@ -97,10 +133,11 @@ describe("OpenCode V2 server plugin contract", () => {
     const context = await createV2Context(HerdrPlugin, { holdRefresh: true })
     try {
       expect(context.spawnCalls).toBeGreaterThan(0)
+      const reloadsBeforeUnload = context.reloadCalls
       await context.unload()
       context.releaseRefresh()
       await new Promise((resolve) => setTimeout(resolve, 500))
-      expect(context.reloadCalls).toBe(0)
+      expect(context.reloadCalls).toBe(reloadsBeforeUnload)
     } finally {
       await context.cleanup()
     }
@@ -118,10 +155,25 @@ describe("OpenCode V2 server plugin contract", () => {
       expect(context.spawnCalls).toBeGreaterThan(0)
       context.releaseRefresh()
       await new Promise((resolve) => setTimeout(resolve, 500))
-      expect(context.reloadCalls).toBe(1)
+      expect(context.reloadCalls).toBe(2)
       expect(errors).toContainEqual(["[herdr] background refresh failed:", "provider reload failed"])
     } finally {
       console.error = originalError
+      await context.cleanup()
+    }
+  })
+
+  test("keeps one catalog transform and removes stale models after discovery refresh", async () => {
+    const context = await createV2Context(HerdrPlugin)
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 25))
+      expect(context.registrations.catalogTransforms).toHaveLength(1)
+      context.setEmptyModelDiscovery(true)
+      const capabilities = context.registrations.tools.find((tool: any) => tool.name === "herdr_capabilities") as any
+      await capabilities.execute({}, { sessionID: "session" })
+      expect(context.registrations.catalogTransforms).toHaveLength(1)
+      expect(context.registrations.models.has("cursor/agent")).toBeFalse()
+    } finally {
       await context.cleanup()
     }
   })
