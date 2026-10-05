@@ -7,26 +7,23 @@
 OpenCode plugin: route selected agents through [Herdr](https://herdr.dev) as `herdr/<adapter>/<nativeModel>` (runtime + model from the id).
 
 Requires Herdr and at least one runtime CLI on `PATH` (`agent`, `claude`, `codex`, or `opencode`).
+This release uses the native OpenCode V2 server plugin API from `@opencode/plugin` and requires OpenCode V2.
 
 **Find it:** [npm](https://www.npmjs.com/package/opencode-herdr) · search `opencode herdr` · GitHub topics `opencode` `herdr`
 
 ## Install
 
-```bash
-opencode plugin opencode-herdr -g
-```
-
-Or in `~/.config/opencode/opencode.json`:
+Add the package to `plugins` in `~/.config/opencode/opencode.json`:
 
 ```json
 {
-  "plugin": [
-    ["opencode-herdr", { "handoverDefault": "cursor" }]
+  "plugins": [
+    { "package": "opencode-herdr", "options": { "handoverDefault": "cursor" } }
   ]
 }
 ```
 
-`handoverDefault` is optional. The plugin injects the provider entrypoint as a `file://` URL so OpenCode can load `createHerdr` even when the project cwd has no local `node_modules` link.
+`handoverDefault` is optional. The V2 server plugin registers Herdr providers, models, tools, commands, and agent routing during setup; it does not use the V1 `plugin` configuration or hook contract.
 
 ## Tested runtimes
 
@@ -44,7 +41,7 @@ Or in `~/.config/opencode/opencode.json`:
 | `/herdr-status` | Herdr availability, runtimes, and target count |
 | `/herdr-test` | Create pane, ask agent a random sum, read the answer back into this chat |
 | `/herdr-delete` | Close all `oh-*` job panes in the `opencode-herdr` tab |
-| `/herdr-pane <runtime> <task>` | Delegate a task (asks if runtime/task missing) |
+| `/herdr-pane <runtime> <task>` | Delegate a task (shows usage if runtime/task is missing) |
 | `/herdr-handover <runtime> [note]` | Split pane, wait idle, send one-line context |
 
 CLI (no LLM):
@@ -53,7 +50,7 @@ CLI (no LLM):
 opencode-herdr-handover --runtime cursor --session <id> --cwd <path>
 ```
 
-On each new OpenCode session the plugin shows a readiness toast. The bundled Herdr skill is installed idempotently to `~/.config/opencode/skills/herdr/SKILL.md` on config load.
+The V2 server plugin does not provide TUI toasts; its command results use synthetic messages with resume disabled. The bundled Herdr skill is installed idempotently to `~/.config/opencode/skills/herdr/SKILL.md` during plugin setup.
 
 ## Model refs
 
@@ -65,10 +62,10 @@ Path plugin (local checkout):
 
 ```json
 {
-  "plugin": [[
-    "/absolute/path/to/opencode-herdr/src/index.ts",
-    { "handoverDefault": "cursor", "debug": true }
-  ]]
+  "plugins": [{
+    "package": "/absolute/path/to/opencode-herdr/src/index.ts",
+    "options": { "handoverDefault": "cursor", "debug": true }
+  }]
 }
 ```
 

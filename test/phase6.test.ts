@@ -14,6 +14,7 @@ import { describeAdapterEvent, finalAssistantText } from "../src/runner"
 import { HerdrController, latchTerminal } from "../src/controller"
 import { HerdrPool } from "../src/pool"
 import { AbortError } from "../src/errors"
+import { createV2Context } from "./v2-context"
 
 const target = { id: "cursor-YWdlbnQ", name: "Cursor agent", adapter: "cursor", nativeModel: "agent", provenance: "verified" as const, limits: { context: 32, output: 8 }, toolCall: false }
 
@@ -68,24 +69,15 @@ test("6.3 preserves native finish reasons", async () => {
 })
 
 test("6.4 config load and capability tool refresh the atomic snapshot", async () => {
-  const root = await mkdtemp("/tmp/herdr-snapshot-")
-  const bin = join(root, "bin")
-  await Bun.$`mkdir -p ${bin}`
-  for (const name of ["herdr", "agent", "opencode", "claude", "codex"]) {
-    const path = join(bin, name)
-    await writeFile(path, "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then printf '1.0.0\\n'; else printf '%s' '{\"models\":[\"safe\"]}'; fi\n")
-    await chmod(path, 0o755)
-  }
-  const previous = { PATH: process.env.PATH, XDG_STATE_HOME: process.env.XDG_STATE_HOME, HERDR_WORKSPACE_ID: process.env.HERDR_WORKSPACE_ID, HERDR_TAB_ID: process.env.HERDR_TAB_ID, HERDR_PANE_ID: process.env.HERDR_PANE_ID }
-  Object.assign(process.env, { PATH: `${bin}:${process.env.PATH}`, XDG_STATE_HOME: join(root, "state"), HERDR_WORKSPACE_ID: "w", HERDR_TAB_ID: "t", HERDR_PANE_ID: "p" })
+  const { registrations, home, cleanup } = await createV2Context(HerdrPlugin)
   try {
-    const hooks: any = await HerdrPlugin.server({ directory: root } as any)
-    await hooks.config({})
-    await hooks.tool.herdr_capabilities.execute({}, {})
-    expect(await Bun.file(join(root, "state", "opencode-herdr", "capabilities-v1.json")).exists()).toBeTrue()
+    const capabilityTool = registrations.tools.find((tool: any) => tool.name === "herdr_capabilities") as any
+    expect(capabilityTool).toBeDefined()
+    const result = await capabilityTool.execute()
+    expect(result.content).toContain("cursor/agent")
+    expect(await Bun.file(join(home, "state", "opencode-herdr", "capabilities-v1.json")).exists()).toBeTrue()
   } finally {
-    Object.assign(process.env, previous)
-    await rm(root, { recursive: true, force: true })
+    await cleanup()
   }
 })
 
@@ -117,9 +109,9 @@ test("6.7 direct tool uses explicit validated runtime and task", async () => {
     received = { selected, task: options.prompt[0].content[0].text }
     return { status: "done", text: "delegated", delegatedTools: false }
   } }) as any)
-  expect(await tools.herdr_pane.execute({ runtime: target.id, task: "safe task" }, {})).toMatchObject({ output: "delegated", metadata: { targetId: target.id } })
+  expect(await tools.herdr_pane.execute({ runtime: target.id, task: "safe task" }, {})).toMatchObject({ content: "delegated", metadata: { targetId: target.id } })
   expect(received).toEqual({ selected: target, task: "safe task" })
-  expect(await tools.herdr_pane.execute({ runtime: "cursor", task: "via runtime" }, {})).toMatchObject({ output: "delegated", metadata: { runtime: "cursor" } })
+  expect(await tools.herdr_pane.execute({ runtime: "cursor", task: "via runtime" }, {})).toMatchObject({ content: "delegated", metadata: { runtime: "cursor" } })
 })
 
 test("6.8 first terminal latch wins under held cleanup", async () => {

@@ -1,5 +1,6 @@
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import { Model, Provider } from "@opencode/plugin"
 import type { Target } from "./adapters/types.js"
 import { HerdrError } from "./errors.js"
 
@@ -42,6 +43,38 @@ export function targetsToModels(targets: Target[], npm = herdrPackageNpm()) {
       },
     }]
   }))
+}
+
+/** Build the native V2 provider source and model definitions. */
+export function targetsToProviderModels(targets: Target[]) {
+  const providerID = Provider.ID.make("herdr")
+  return targets.map((target) => {
+    const modelID = target.id.startsWith("herdr/") ? target.id.slice("herdr/".length) : target.id
+    const model = Model.Info.default(providerID, Model.ID.make(modelID))
+    return {
+      ...model,
+      name: target.name,
+      capabilities: {
+        tools: target.toolCall,
+        input: ["text"],
+        output: ["text"],
+      },
+      limit: target.limits,
+      variants: (target.efforts ?? []).map((effort) => ({
+        id: Model.VariantID.make(effort),
+        settings: { effort },
+      })),
+    }
+  })
+}
+
+export function herdrProviderInfo() {
+  return {
+    ...Provider.Info.empty(Provider.ID.make("herdr")),
+    name: "Herdr",
+    activation: "enabled" as const,
+    package: "opencode-herdr",
+  }
 }
 export type RuntimeContext = {
   cwd: string

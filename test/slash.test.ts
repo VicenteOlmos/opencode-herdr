@@ -7,6 +7,7 @@ import { HandoverAbort } from "../src/errors"
 import {
   buildAgentSumPrompt,
   handleHerdrDelete,
+  handleHerdrStatus,
   handleHerdrTest,
   probeAgentRoundtrip,
   probeMarker,
@@ -461,4 +462,14 @@ test("handleHerdrDelete toasts error when runtime context invalid", async () => 
     if (previous === undefined) delete process.env.HERDR_ENV
     else process.env.HERDR_ENV = previous
   }
+})
+
+test("legacy slash posting failures still finish with HandoverAbort", async () => {
+  const toasts: string[] = []
+  await expect(handleHerdrStatus(
+    baseDeps({ postSession: async () => { throw new Error("transcript unavailable") } }),
+    { parts: [] },
+    async (input) => { toasts.push(input.message) },
+  )).rejects.toBeInstanceOf(HandoverAbort)
+  expect(toasts[0]).toContain("conversation post failed: transcript unavailable")
 })
