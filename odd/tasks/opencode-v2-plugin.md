@@ -26,9 +26,9 @@ The current entrypoint uses the OpenCode V1 Plugin/PluginModule contract and ret
 - Branch point / initial review boundary: `0881d41`.
 - Delivery strategy: `ask-on-risk`.
 - Forecast: 450–700 authored changed lines, excluding generated lockfiles.
-- Running committed authored count: 1,704 implementation/test/documentation lines (924 initial + 780 actual-beta server reconciliation), excluding generated lockfile and task tracking (tracking commit `f845e9f`: 65 lines).
+- Running committed authored count: 2,094 implementation/test/documentation lines (924 initial + 780 actual-beta server reconciliation + 390 companion), excluding generated lockfile and task tracking (tracking commit `f845e9f`: 65 lines).
 - Chain strategy: `feature-branch-chain`, explicitly selected by user (option 1).
-- Local chain: tracker `feat/opencode-v2-plugin` -> initial `feat/opencode-v2-01-server` (`84db6dc`) -> reconciliation `feat/opencode-v2-03-server` (`c04e8a5`) -> planned companion `feat/opencode-v2-04-feedback`. The original dirty `feat/opencode-v2-02-feedback` is preserved as recovery WIP, not a delivery slice. No remote operation is authorized.
+- Local chain: tracker `feat/opencode-v2-plugin` -> initial `feat/opencode-v2-01-server` (`84db6dc`) -> reconciliation `feat/opencode-v2-03-server` (`c04e8a5`) -> companion `feat/opencode-v2-04-feedback` (`a9ec0bc`). The original dirty `feat/opencode-v2-02-feedback` is preserved as recovery WIP, not a delivery slice. No remote operation is authorized.
 - Server slice `size:exception`: explicitly accepted by user (yes) for 924 authored lines plus generated lockfile; retain tests and docs with the API migration.
 - Remaining follow-up `size:exception`: user explicitly accepted both approximately 498 server/catalog/location and 638 TUI/smoke/docs authored-line blocks (1,136 remaining total), preserving coherent tests/docs. Validate actual independent snapshot boundaries before commits; these estimates are not a code-shrinking target. No remote operation granted.
 - Engram mirror: topic `odd/opencode-v2-plugin/tasks`; repository locator `odd/tasks/opencode-v2-plugin.md`.
@@ -44,14 +44,14 @@ The current entrypoint uses the OpenCode V1 Plugin/PluginModule contract and ret
   - Checks: observed deterministic RED → GREEN → REFACTOR where applicable; `bun test`; `bun run typecheck`; `bun run scripts/smoke.ts`.
   - Commit: `84db6dc95da57c8453ecec8f367c42674fe4d156` on `feat/opencode-v2-01-server`, base `f845e9f`. Risk: high/unassessable; RDD disabled/unmanaged. Proof: writer + independent correction verification passed 89 tests / 334 expectations, typecheck, provider smoke and diff check; parent spot check passed 6 V2 tests / 23 expectations. Explicit size exception accepted. Slice total: 1,486 changed lines including generated lockfile (543) and task tracking (19); authored behavior/proof/docs: 924.
   - Reopened: actual published V2 beta loaded a plugin identity but did not register Herdr commands/provider/models. The earlier stable-package API port was structurally tested, not compatible with the actual target. Preserve commit/history and reconcile beta APIs on the current integration child branch before closing the task.
-- [ ] OCV2-2 — Preserve V2 handover feedback and verify packaged runtime integration.
+- [x] OCV2-2 — Preserve V2 handover feedback and verify packaged runtime integration.
   - Route: delegated direct; multi-file logic, CLI/TUI integration, and verification triggers.
   - Implement companion TUI-local mechanical slash callbacks, notifications and visible non-generating handover feedback against verified V2 beta APIs. No fake server RPC or model-generated command templates.
   - Update package exports, V2 configuration/installation documentation, and packaging checks.
   - Add a focused actual V2 plugin-loading smoke check without provider authentication or invoking paid model runs.
   - Acceptance: installable package discovers server and companion entrypoints, handover feedback is visible, setup/disposal works, documentation matches V2 behavior.
   - Checks: focused tests; `bun test`; `bun run typecheck`; `bun run scripts/smoke.ts`; `bun run pack:check`; actual V2 loading smoke when locally available.
-  - Commit / risk / proof: pending.
+  - Commit: `a9ec0bc27d5411f723592b78a7034cb3ba0db71f`, parent `43e9221` (server tracking after `c04e8a5`). Risk high/unassessable; RDD disabled/unmanaged. Independent proof: 100 tests / 361 expectations, full checks, actual native slot/keymap/status callback/enqueued synthetic feedback and deduplication; cleanup succeeded. Parent spot: 6 TUI tests / 19 expectations. 390 authored + 7 generated lock lines, 37 packaged files. Physical keyboard, real providers and clean installer are untested.
 
 ## Verification policy
 
@@ -122,6 +122,25 @@ Use test-first changes when deterministic runnable expected behavior exists. Sou
 
 - OCV2-1 closed by verified actual-beta reconciliation commit `c04e8a5c9c815f3cbc6773cb73990265ca94e395` (`fix(opencode): reconcile server with V2 beta`) on `feat/opencode-v2-03-server`, parent `84db6dc`. Standalone snapshot: 94 tests / 341 expectations, typecheck, lifecycle smoke, beta catalog smoke, pack 34 files, all whitespace; native concurrent A/B fake generation HTTP200 with correct runner/adapter directories. Parent spot: 11 tests / 43 expectations. Risk high/unassessable, RDD OFF/unmanaged. Size exception accepted; actual authored 780 + generated lock 456. Boundary redistributed runtime smoke and server docs into this slice; no cosmetic slimming. Root WIP hashes unchanged, all three new server proof files committed. Rollback boundary: this exact beta server reconciliation commit, independent of future companion.
 
+- OCV2-2 closed by `a9ec0bc27d5411f723592b78a7034cb3ba0db71f` (`feat(opencode): add native V2 TUI companion`) on `feat/opencode-v2-04-feedback`, parent `43e9221b48be830f195a514950f7a418dd3c94e6` (passive server tracking after implementation `c04e8a5`). Snapshot source copied from preserved root WIP; README proof status updated mechanically after native gate. Independent checks: 100 tests / 361 expectations, typecheck, lifecycle/catalog smokes, pack 37 files, all whitespace. Native TUI gate: actual slot/keymap and status callback, flagged real enqueue produces one direct toast/no duplicate, unflagged resume:false real enqueue produces exactly one listener toast; cleanup/session removal/native exit0, 3.025 seconds, no model generation or host-home subscriptions. Parent spot 6 tests / 19 expectations. 390 authored + 7 generated lock = 397 changed lines. Accepted exceptions respected; runtime proof/docs distribution made first slice 780 and second390, rather than preliminary498/638. No proof stripped or code golf. Rollback boundary: companion commit removes TUI metadata/export/deps/source/tests/docs only, leaving verified server intact.
+- Native feedback blocker CLOSED: exact child-only `OPENCODE_DISABLE_AUTOUPDATE=1` lets private standalone TUI proof skip updater without any global setting mutation. Previous unavailable/error runs preserved as history, not current verdict. Physical keyboard input, real paid providers, default installer and clean published-package installation are still untested; not production-release-ready. No failed required checks remain for scoped implementation.
+
+## Final local chain and review context
+
+```text
+main 0881d41
+└─ tracker feat/opencode-v2-plugin: f845e9f (draft/no-merge when remote creation is authorized)
+   └─ feat/opencode-v2-01-server: 84db6dc (initial stable-package port; corrected by next child)
+      └─ feat/opencode-v2-03-server: c04e8a5 + 43e9221 (actual-beta server and tracking)
+         └─ feat/opencode-v2-04-feedback: a9ec0bc + final tracking update (native companion)
+```
+
+- Strategy remains feature-branch-chain. Each child targets the immediate preceding branch; never merge tracker before integration/review.
+- Start/end: initial V1 migration retained in history; final scoped implementation targets actual beta17823. Server rollback and companion rollback are independent at the named commits.
+- Planned remote child boundaries: tracker `f845e9f`; child1 `f845e9f..84db6dc`; child2 `84db6dc..feat/opencode-v2-03-server`; child3 `feat/opencode-v2-03-server..feat/opencode-v2-04-feedback`. Tracking-only commits are passive supporting artifacts, not extra behavior slices.
+- Approval/CI/issue linkage and authenticated maintainer ability to apply any remote `size:exception` label remain unverified; user size consent is local planning authority, not a fabricated GitHub label or permission.
+- Root recovery workspace remains on dirty `feat/opencode-v2-02-feedback` with its pre-existing source WIP and `.engram/` untouched except parent-owned task tracking updates. Final clean implementation lives in sibling `opencode-herdr-worktrees/v2-feedback`; server snapshot in sibling `opencode-herdr-worktrees/v2-server`. No worktrees removed, refs rewritten, push, PR, merge, release or global config change.
+
 ## Next step
 
-Prepare the companion child `feat/opencode-v2-04-feedback` from the verified server branch after its passive tracking update, copying only deferred TUI metadata/export/dependencies/source/tests/README/smoke assertion from preserved root WIP. Verify snapshot independently, commit under accepted exception, record final boundary. Native enqueue-toast proof remains pending; physical keyboard/default installer untested. No push/PR/merge authorized. OCV2-2 closes only with honest required proof and commit evidence.
+Local implementation and work-unit commits are complete. Remote push/PR creation requires separate explicit destination/operation/session authorization, approved issue/link intent and target policy checks. Optional remaining diagnostics: physical slash-key input and clean packaged install/default installer, without real provider calls unless separately authorized. Preserve final clean worktree and original recovery WIP; don't run destructive cleanup.
