@@ -195,5 +195,12 @@ Implementation tasks OCV2-1 through OCV2-3 remain complete. OCV2-4 is verified a
 
 ### Main integration complete
 
-- PR27 marked ready only after exact tracker head `3c8a2c3` required CI `37641482198` PASS. Signed squash into main `1c290550c6014b41ce47014011ee1d23a5069482`, state MERGED readback, signature verified/valid and tree exactly equal `3c8a2c3`. All PR27–32 MERGED; no bypass or branch deletion.
+- PR27 marked ready only after exact tracker head `3c8a2c3` required CI `37641482198` PASS. Signed squash into main `1c290550c6014b41ce47014011ee1d23a5069482`, state MERGED readback, signature verified/valid and tree exactly equal `3c8a2c3`. All PR27–32 MERGED; no bypass or agent-requested branch deletion. Repository auto-delete removed the merged remote tracker, and the authorized passive tracking push recreated it; local branches remain preserved.
 - OCV2-5 complete. Clean detached sibling `v2-published-main` pins the exact integrated main for publication checks; original dirty WIP and all existing branches/worktrees preserved. OCV2-6 pending signed tag, GitHub stable release, one existing Actions publish trigger, public npm version/latest continuity.
+
+### Stable publication attempt and retained state
+
+- Exact integrated main `1c290550c6014b41ce47014011ee1d23a5069482` independently reverified: fresh frozen Bun1.3.10 install, typecheck, full120/425, lifecycle and supplied beta17823 catalog PASS; main push CI `37641715641` PASS. Fresh 37-file tarball `/tmp/opencode-herdr-publish-verify.4P8OSU/pack/opencode-herdr-0.2.0.tgz` SHA256 matches `d918d461100b5ca50799ad7d056cded87c231da57c4ae774d5798ffa3784fad7`.
+- Signed annotated tag `v0.2.0` created and pushed, tag object `bdd43a6a89e6002102321daaf5c4cca7270da962` points to exact main; GitHub verified=true/reason=valid. Registry check at 2026-10-07T15:06:40Z: 0.2.0 absent, latest0.1.3.
+- One stable GitHub release creation attempt (`--verify-tag --latest`) failed with HTTP500. Do not infer successful release or blindly retry. Target-bound readback returned404 for v0.2.0 release; publish.yml run list contained no new release run (latest was Sept21 workflow_dispatch). npm publication was not started.
+- OCV2-6 remains incomplete. Signed tag and integrated source retained; no tag deletion/recreation, no manual workflow dispatch, no local npm credentials. Await a human-approved release-creation retry after failure; no further GitHub mutation in this continuation. This local task-document update is not yet pushed.
