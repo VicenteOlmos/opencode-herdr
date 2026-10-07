@@ -24,6 +24,7 @@ const run = async (argv: string[]) => {
 
 export const HerdrPlugin = Plugin.define({
   id: "opencode-herdr",
+  tui: true,
   async setup(context) {
     const targets: import("./adapters/types.js").Target[] = []
     let herdr = false
