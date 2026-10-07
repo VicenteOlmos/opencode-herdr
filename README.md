@@ -27,6 +27,18 @@ Add the package to `plugins` in `~/.config/opencode/opencode.json`:
 
 `handoverDefault` is optional. The server plugin registers Herdr providers, models, tools, and agent routing through the beta catalog API. Mechanical `/herdr-*` commands are callbacks in the `./tui` companion and execute on the local TUI host; they are not server commands and are not prompt templates. Remote/server-only clients do not receive those local callbacks. The server smoke verifies plugin activation and the beta registry's `tui: true` companion declaration, but does not verify interactive TUI rendering or command discovery.
 
+## Install from Herdr
+
+The Herdr marketplace companion requires Herdr 0.9.3 or newer, Bun, and OpenCode V2 beta `opencode2` beta-17823 on `PATH`. After the repository is indexed by Herdr, select **Install OpenCode integration** in the global context. It runs:
+
+```sh
+opencode2 plugin add opencode-herdr@0.2.0
+```
+
+This installs the pinned npm version in OpenCode's global configuration. Repeating the install is safe; an isolated beta-17823 check confirmed the existing JSONC configuration, comments, and bytes remain unchanged on repeat. Restart OpenCode if the integration does not appear. The installer check covers installation and configuration only, not marketplace UI visibility or interactive OpenCode UI behavior.
+
+Marketplace discovery requires this manifest on a public repository's default branch and the `herdr-plugin` GitHub topic; the index refreshes every 30 minutes.
+
 ## Tested runtimes
 
 | Runtime | CLI |

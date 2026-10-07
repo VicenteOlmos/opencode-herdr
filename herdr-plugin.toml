@@ -1,0 +1,12 @@
+id = "opencode-herdr"
+name = "OpenCode Herdr"
+version = "0.1.0"
+min_herdr_version = "0.9.3"
+description = "Install the OpenCode Herdr integration from the Herdr marketplace."
+platforms = ["linux", "macos"]
+
+[[actions]]
+id = "install-opencode"
+title = "Install OpenCode integration"
+contexts = ["global"]
+command = ["opencode2", "plugin", "add", "opencode-herdr@0.2.0"]
