@@ -16,7 +16,9 @@ The current entrypoint uses the OpenCode V1 Plugin/PluginModule contract and ret
 - Preserve visible handover feedback without accidentally starting another model turn. Investigate V2 synthetic-message semantics before selecting an implementation.
 - Move terminal notifications to a companion CLI/TUI plugin when required by V2.
 - User explicitly accepted TUI-local `/herdr-*` execution instead of server callbacks. Mechanical commands run on the client/TUI host; remote-server-transparent execution is out of scope. Detect unsupported remote attachment rather than silently acting on another host.
-- No remote execution, publishing, push, PR creation, merge, global configuration changes, or changes to untracked `.engram/`.
+- Original implementation scope excluded remote delivery. On 2026-10-07 the user explicitly authorized push, chained PR creation/integration, a new version, npm `latest`, and a GitHub release using the configured `gh` session for `github.com/VicenteOlmos/opencode-herdr` and the existing GitHub Actions Trusted Publisher for npm `opencode-herdr`. No other remote execution, credentials, global configuration changes, or changes to untracked `.engram/` are authorized.
+- Keep the current dependency versions unchanged, as explicitly requested after the Socket audit; the observed transitive alerts remain unresolved.
+- The user explicitly authorized following the actual repository PR policy without adding generic approved-issue forms or extra labels. Preserve required CI, signatures, branch/tag protection, and the selected chain strategy; do not use an administrative bypass.
 - English artifacts; Conventional Commits without AI attribution.
 - Receipt-driven development is OFF, decided by global preference. Do not enable or start native review.
 
@@ -28,7 +30,7 @@ The current entrypoint uses the OpenCode V1 Plugin/PluginModule contract and ret
 - Forecast: 450–700 authored changed lines, excluding generated lockfiles.
 - Running committed authored count: 2,213 implementation/test/documentation lines (924 initial + 780 actual-beta server reconciliation + 390 companion + 119 launcher correction/proof docs), excluding generated lockfile and task tracking (tracking commit `f845e9f`: 65 lines).
 - Chain strategy: `feature-branch-chain`, explicitly selected by user (option 1).
-- Local chain: tracker `feat/opencode-v2-plugin` -> initial `feat/opencode-v2-01-server` (`84db6dc`) -> reconciliation `feat/opencode-v2-03-server` (`c04e8a5`) -> companion `feat/opencode-v2-04-feedback` (`a9ec0bc`). The original dirty `feat/opencode-v2-02-feedback` is preserved as recovery WIP, not a delivery slice. No remote operation is authorized.
+- Local chain: tracker `feat/opencode-v2-plugin` -> initial `feat/opencode-v2-01-server` (`84db6dc`) -> reconciliation `feat/opencode-v2-03-server` (`c04e8a5`) -> companion `feat/opencode-v2-04-feedback` (`a9ec0bc`). The original dirty `feat/opencode-v2-02-feedback` is preserved as recovery WIP, not a delivery slice. Remote delivery is now authorized only within the scope above.
 - Server slice `size:exception`: explicitly accepted by user (yes) for 924 authored lines plus generated lockfile; retain tests and docs with the API migration.
 - Remaining follow-up `size:exception`: user explicitly accepted both approximately 498 server/catalog/location and 638 TUI/smoke/docs authored-line blocks (1,136 remaining total), preserving coherent tests/docs. Validate actual independent snapshot boundaries before commits; these estimates are not a code-shrinking target. No remote operation granted.
 - Engram mirror: topic `odd/opencode-v2-plugin/tasks`; repository locator `odd/tasks/opencode-v2-plugin.md`.
@@ -63,6 +65,25 @@ The current entrypoint uses the OpenCode V1 Plugin/PluginModule contract and ret
   - Checks: deterministic regression observed RED → GREEN → REFACTOR; focused launcher test; full tests/typecheck/lifecycle/pack/whitespace; fresh tarball installation/closure/root+TUI exports/bin/skills; native installed package-source server/fake generation and automatic companion proof without real provider calls.
   - Proof: clean `f615bd3` tarball installed 202 packages and imports/closure passed, but installed launcher exits1 (`node_modules/src/handover-cli.ts` missing); direct package invocation has expected usage exit2. Native package scenarios were not launched after failed preflight. No correction made yet.
   - Commit: `9a1fb43f094388e263fb6c89a1df55a91aad813c` on `fix/opencode-v2-installed-launcher`, parent `f615bd3`; 119 authored lines including the passive README proof update. Risk high/unassessable, RDD OFF/unmanaged. Observed RED 1 pass/2 fail → GREEN 3 tests/9 assertions; independent 103 tests/370 expectations and fresh installed/native package proof PASS. ShellCheck unavailable; physical keyboard, real providers and default runtime downloader remain untested.
+
+- [ ] OCV2-4 — Prepare the stable V2 release metadata and verify the exact release candidate.
+  - Route: delegated direct; metadata/documentation preparation and test/build/install verification triggers.
+  - Scope: new `chore/opencode-v2-05-release` child branch from `3157442`; `package.json` and `README.md` only, with parent-owned tracking in this document.
+  - Plan: verify that `0.2.0` is unpublished before selecting it; make the V2 compatibility boundary explicit and keep all dependency pins and the runtime source unchanged.
+  - Acceptance: available new version; exact dependency and executable bytes preserved; package metadata/docs coherent; CI-compatible full checks and final artifact inspection pass.
+  - Checks: exact workflow Bun version where available; full tests, typecheck, lifecycle smoke, supplied-beta catalog smoke, pack dry-run/tarball, launcher regression and whitespace. No artificial RED is applicable to a metadata-only release bump.
+  - Forecast: 20–80 authored metadata/documentation lines, plus passive tracking.
+- [ ] OCV2-5 — Deliver and integrate the feature-branch chain under current repository policy.
+  - Route: delegated verification for each child snapshot and CI; parent performs authorized Git/`gh` delivery operations.
+  - Acceptance: tracker draft/no-merge while children are pending; each child targets its immediate parent; observed required `test` checks pass; signatures verified by GitHub; child integration preserves final source and current `main` infrastructure.
+  - Policy: authorized actor has `ADMIN`; main ruleset requires PRs, strict `test`, signed commits, linear history, thread resolution, and allows squash/rebase. No admin bypass. Existing over-budget cohesive slices retain their previously accepted rationale without adding absent labels.
+  - Current remote base: `d46bb4493a146e1bfe2f0bc253be77fdd4237230`; only `.github/workflows/pullfrog.yml` changed since `0881d41`, with no source conflict identified.
+  - Checks: target-bound PR template/policy, CI/status readback per slice, exact integrated source/dependency comparison, final main CI and clean worktrees. Do not alter unrelated Dependabot PRs 23–26.
+- [ ] OCV2-6 — Publish and verify the stable release through the existing Trusted Publisher.
+  - Route: parent authorized target-bound release/Actions operations; delegated public-registry and artifact verification.
+  - Acceptance: signed release tag satisfies policy; stable/non-prerelease GitHub release at the verified integrated commit; exactly one publishing trigger; successful Actions run; npm version and `latest` readback match the candidate.
+  - Scope: npm package `opencode-herdr`, GitHub repository `VicenteOlmos/opencode-herdr`, existing `.github/workflows/publish.yml` only; no local npm tokens or OTP, no other session.
+  - Checks: version collision/tag existence, signed tag evidence, release commit identity, Actions terminal result and npm public registry metadata/tarball continuity. Unknown write outcomes stop further mutation, never blindly retry.
 
 ## Verification policy
 
@@ -159,4 +180,4 @@ main 0881d41
 
 ## Next step
 
-All local tasks and package verification are complete. For actual stable publication, assign a new version because0.1.3 is already published, preserve the documented beta17823 compatibility scope, and obtain explicit target/operation/authentication-session authorization for publication. Current user authorized the fix and revalidation, not version bump/npm publish/push/PR/merge. Do not publish unchanged0.1.3 or invoke the publisher without authorization. Optional remaining tests: physical slash input/real providers/default package downloader; ShellCheck unavailable. Preserve final packaging worktree and original recovery WIP.
+Implementation tasks OCV2-1 through OCV2-3 remain complete. Execute OCV2-4 through OCV2-6 in order under the explicit delivery/session authorization above. New version `0.2.0` is only a candidate until exact availability is checked. Keep all dependency pins unchanged; Socket findings are documented, not remediated. The clean packaging worktree and dirty root recovery WIP must be preserved. The original functional limits (physical keyboard, real providers, default downloader, unavailable ShellCheck) remain disclosed rather than fabricated proof.
