@@ -7,6 +7,7 @@ import { HandoverAbort } from "../src/errors"
 import {
   buildAgentSumPrompt,
   handleHerdrDelete,
+  handleHerdrStatus,
   handleHerdrTest,
   probeAgentRoundtrip,
   probeMarker,
@@ -65,14 +66,10 @@ test("installHerdrSkill is idempotent", async () => {
   }
 })
 
-test("injectConfig registers herdr slash commands", () => {
+test("configuration injection does not create model-dispatched command templates", () => {
   const config: any = {}
   injectConfig(config, [], { cwd: "/tmp", workspace: "w", tab: "t", pane: "p" })
-  for (const name of ["herdr-pane", "herdr-handover", "herdr-status", "herdr-test", "herdr-delete"]) {
-    expect(config.command[name]?.description).toBeString()
-    expect(config.command[name]?.template).toBeString()
-  }
-  expect(config.command["herdr-test"].description).toContain("random sum")
+  expect(config.command).toBeUndefined()
 })
 
 test("resolveTestRuntime prefers handoverDefault when verified", () => {
@@ -461,4 +458,14 @@ test("handleHerdrDelete toasts error when runtime context invalid", async () => 
     if (previous === undefined) delete process.env.HERDR_ENV
     else process.env.HERDR_ENV = previous
   }
+})
+
+test("legacy slash posting failures still finish with HandoverAbort", async () => {
+  const toasts: string[] = []
+  await expect(handleHerdrStatus(
+    baseDeps({ postSession: async () => { throw new Error("transcript unavailable") } }),
+    { parts: [] },
+    async (input) => { toasts.push(input.message) },
+  )).rejects.toBeInstanceOf(HandoverAbort)
+  expect(toasts[0]).toContain("conversation post failed: transcript unavailable")
 })

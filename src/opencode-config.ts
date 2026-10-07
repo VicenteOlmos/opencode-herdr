@@ -1,5 +1,6 @@
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import { Model, Provider } from "@opencode-ai/plugin"
 import type { Target } from "./adapters/types.js"
 import { HerdrError } from "./errors.js"
 
@@ -43,6 +44,39 @@ export function targetsToModels(targets: Target[], npm = herdrPackageNpm()) {
     }]
   }))
 }
+
+/** Build the native V2 provider source and model definitions. */
+export function targetsToProviderModels(targets: Target[]) {
+  const providerID = Provider.ID.make("herdr")
+  return targets.map((target) => {
+    const modelID = target.id.startsWith("herdr/") ? target.id.slice("herdr/".length) : target.id
+    const model = Model.Info.default(providerID, Model.ID.make(modelID))
+    return {
+      ...model,
+      name: target.name,
+      capabilities: {
+        tools: target.toolCall,
+        input: ["text"],
+        output: ["text"],
+      },
+      limit: { context: target.limits.context, input: target.limits.context, output: target.limits.output },
+      settings: {},
+      variants: (target.efforts ?? []).map((effort) => ({
+        id: Model.VariantID.make(effort),
+        settings: { effort },
+      })),
+    }
+  })
+}
+
+export function herdrProviderInfo() {
+  return {
+    ...Provider.Info.empty(Provider.ID.make("herdr")),
+    name: "Herdr",
+    activation: "enabled" as const,
+    package: `aisdk:${herdrPackageNpm()}`,
+  }
+}
 export type RuntimeContext = {
   cwd: string
   workspace: string
@@ -72,33 +106,6 @@ export function injectConfig(config: any, targets: Target[], runtime: RuntimeCon
       ...(debug ? { debug: true } : {}),
     },
     models: targetsToModels(targets, npm),
-  }
-  ;(config.command ??= {})["herdr-pane"] ??= {
-    description: "Delegate task through a Herdr runtime. Args: <runtime> <task>",
-    template: [
-      "Use herdr_capabilities first.",
-      "Parse $ARGUMENTS as <runtime> <task>.",
-      "Runtime is one of cursor|opencode|claude|codex, or a full target id from herdr_capabilities.",
-      "If no runtime, ask runtime with question using available adapters/targets from herdr_capabilities.",
-      "If no task, ask task with question.",
-      "If both runtime and task are supplied, do not question.",
-    ].join(" "),
-  }
-  ;(config.command ??= {})["herdr-handover"] ??= {
-    description: "Hand over to Herdr pane and send context prompt. Args: <runtime> [note]",
-    template: "Mechanical handover handled by opencode-herdr. Runtime/note in $ARGUMENTS (or plugin handoverDefault).",
-  }
-  ;(config.command ??= {})["herdr-status"] ??= {
-    description: "Show Herdr availability, runtimes, and target count",
-    template: "Mechanical status handled by opencode-herdr.",
-  }
-  ;(config.command ??= {})["herdr-test"] ??= {
-    description: "Create pane, ask agent a random sum, read answer back into this chat",
-    template: "Mechanical test handled by opencode-herdr.",
-  }
-  ;(config.command ??= {})["herdr-delete"] ??= {
-    description: "Close all opencode-herdr job panes (oh-*)",
-    template: "Mechanical delete handled by opencode-herdr.",
   }
 }
 

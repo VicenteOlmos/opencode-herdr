@@ -9,6 +9,7 @@ import { HerdrPool, JOB_PANE_PREFIX } from "../src/pool"
 import { AbortError } from "../src/errors"
 import type { Target } from "../src/adapters/types"
 import type { Job, JobResultV1 } from "../src/job"
+import { createV2Context } from "./v2-context"
 
 const target = {
   id: "cursor-agent",
@@ -333,40 +334,13 @@ test("launch error retains no working claim and preserves primary error", async 
   expect(pool.releases[0]?.status).toBe("error")
 })
 
-test("server registers no session-lifecycle toast hook and ignores non-Herdr commands", async () => {
-  const root = await mkdtemp("/tmp/herdr-no-toast-")
-  const toasts: unknown[] = []
-  const mockContext = {
-    directory: root,
-    client: {
-      tui: {
-        showToast: async (input: unknown) => { toasts.push(input) },
-      },
-      session: {
-        prompt: async () => {},
-      },
-    },
+test("V2 server leaves mechanical slash callbacks to the local TUI companion", async () => {
+  const { registrations, cleanup } = await createV2Context(HerdrPlugin)
+  try {
+    expect(registrations.eventSubscriptions).toHaveLength(0)
+    expect(registrations.commands).toEqual([])
+    expect(registrations.synthetic).toEqual([])
+  } finally {
+    await cleanup()
   }
-  const hooks = await HerdrPlugin.server(mockContext as any, undefined)
-
-  // R1/R3: session-lifecycle hook must not be registered
-  expect(hooks.event).toBeUndefined()
-
-  // Guard: if an event hook were present (pre-removal code), session.created must not toast
-  if (typeof (hooks as any).event === "function") {
-    await (hooks as any).event({
-      event: { type: "session.created", properties: { info: { id: "s1" } } },
-    })
-    expect(toasts).toHaveLength(0)
-  }
-
-  // R4: non-Herdr command must not fire any Herdr toast
-  const cmdBefore = hooks["command.execute.before"]
-  expect(cmdBefore).toBeDefined()
-  const nonHerdrOutput = { parts: [{ type: "text", text: "x" }] }
-  await cmdBefore!(
-    { command: "summarize", sessionID: "s1", arguments: "" } as any,
-    nonHerdrOutput as any,
-  )
-  expect(toasts).toHaveLength(0)
 })
