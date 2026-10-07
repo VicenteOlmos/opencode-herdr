@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { readFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { HerdrController } from "../src/controller.js"
 import { formatFeedbackToast, postHerdrFeedback } from "../src/feedback.js"
 import { HerdrTuiPlugin } from "../src/tui.js"
 
@@ -55,6 +57,155 @@ describe("OpenCode V2 TUI companion", () => {
     await cleanup?.()
     expect(slotDisposed()).toBeTrue()
   })
+
+  test("binds pane execution to the selected session directory before refresh awaits", async () => {
+    const root = await mkdtemp(join(tmpdir(), "herdr-tui-location-"))
+    const directoryA = join(root, "workspace-a")
+    const directoryB = join(root, "workspace-b")
+    await mkdir(directoryA)
+    await mkdir(directoryB)
+    const envKeys = ["HOME", "XDG_STATE_HOME", "HERDR_WORKSPACE_ID", "HERDR_TAB_ID", "HERDR_PANE_ID"]
+    const previousEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]))
+    const previousSpawn = Bun.spawn
+    const previousExecute = HerdrController.prototype.execute
+    const executions: string[] = []
+    const feedback: any[] = []
+    let currentSessionID = "session-b"
+    let startRefresh!: () => void
+    let releaseRefresh!: (code: number) => void
+    let finishFeedback!: () => void
+    const refreshStarted = new Promise<void>((resolve) => { startRefresh = resolve })
+    const refreshGate = new Promise<number>((resolve) => { releaseRefresh = resolve })
+    const feedbackFinished = new Promise<void>((resolve) => { finishFeedback = resolve })
+    let cleanup: (() => void | Promise<void>) | undefined
+    process.env.HOME = root
+    process.env.XDG_STATE_HOME = join(root, "state")
+    process.env.HERDR_WORKSPACE_ID = "workspace-1"
+    process.env.HERDR_TAB_ID = "workspace-1:tab-1"
+    process.env.HERDR_PANE_ID = "workspace-1:pane-1"
+    Bun.spawn = ((argv: string[]) => {
+      let code = 1
+      let stdout = ""
+      let exited = Promise.resolve(code)
+      if (argv[0] === "herdr" && argv[1] === "--version") {
+        code = 0
+        stdout = "1.0.0\n"
+        startRefresh()
+        exited = refreshGate
+      } else if (argv[0] === "agent" && argv[1] === "models") {
+        code = 0
+        stdout = "auto - Auto (default)\n"
+        exited = Promise.resolve(code)
+      }
+      return {
+        exited,
+        stdout: new Response(stdout).body!,
+        stderr: new Response("").body!,
+      }
+    }) as unknown as typeof Bun.spawn
+    HerdrController.prototype.execute = async function () {
+      executions.push((this as any).options.cwd)
+      return { status: "done", text: "fake task result" } as any
+    }
+    try {
+      const { context, layers } = createNativeTuiContext({
+        options: {},
+        location: { directory: directoryA },
+        data: {
+          session: {
+            get: (sessionID: string) => ({
+              location: { directory: sessionID === "session-b" ? directoryB : directoryA },
+            }),
+          },
+        },
+        ui: { router: { current: () => ({ type: "session", sessionID: currentSessionID }) } },
+        client: {
+          session: {
+            synthetic: async (payload: unknown) => {
+              feedback.push(payload)
+              finishFeedback()
+            },
+          },
+        },
+      })
+      const registration = await HerdrTuiPlugin.setup(context as any)
+      cleanup = typeof registration === "function" ? registration : undefined
+      const command = layers[0]?.()?.commands?.find((item) => item.slash?.name === "herdr-pane")
+      command?.run("cursor task")
+      await refreshStarted
+      currentSessionID = "session-a"
+      releaseRefresh(0)
+      await feedbackFinished
+      expect(executions).toEqual([directoryB])
+      expect(feedback[0]).toMatchObject({ sessionID: "session-b" })
+    } finally {
+      await cleanup?.()
+      Bun.spawn = previousSpawn
+      HerdrController.prototype.execute = previousExecute
+      for (const [key, value] of Object.entries(previousEnv)) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  for (const commandName of ["herdr-pane", "herdr-test", "herdr-handover"]) {
+    for (const invalidLocation of [undefined, "https://remote.example/workspace", "relative/path", join(tmpdir(), `missing-${crypto.randomUUID()}`)]) {
+      test(`${commandName} fails closed for selected session location ${String(invalidLocation)}`, async () => {
+        const root = await mkdtemp(join(tmpdir(), "herdr-tui-invalid-location-"))
+        const envKeys = ["HOME", "XDG_STATE_HOME", "HERDR_WORKSPACE_ID", "HERDR_TAB_ID", "HERDR_PANE_ID"]
+        const previousEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]))
+        const previousSpawn = Bun.spawn
+        const previousExecute = HerdrController.prototype.execute
+        const spawned: string[][] = []
+        const executions: string[] = []
+        const toasts: any[] = []
+        let cleanup: (() => void | Promise<void>) | undefined
+        process.env.HOME = root
+        process.env.XDG_STATE_HOME = join(root, "state")
+        process.env.HERDR_WORKSPACE_ID = "workspace-1"
+        process.env.HERDR_TAB_ID = "workspace-1:tab-1"
+        process.env.HERDR_PANE_ID = "workspace-1:pane-1"
+        Bun.spawn = ((argv: string[]) => {
+          spawned.push(argv)
+          return { exited: Promise.resolve(1), stdout: new Response("").body!, stderr: new Response("").body! }
+        }) as unknown as typeof Bun.spawn
+        HerdrController.prototype.execute = async function () {
+          executions.push((this as any).options.cwd)
+          return { status: "done", text: "unexpected" } as any
+        }
+        try {
+          const { context, layers } = createNativeTuiContext({
+            options: {},
+            location: { directory: root },
+            data: { session: { get: () => invalidLocation === undefined ? undefined : { location: { directory: invalidLocation } } } },
+            ui: {
+              router: { current: () => ({ type: "session", sessionID: "session-invalid" }) },
+              toast: { show: (toast: unknown) => { toasts.push(toast) } },
+            },
+          })
+          const registration = await HerdrTuiPlugin.setup(context as any)
+          cleanup = typeof registration === "function" ? registration : undefined
+          const command = layers[0]?.()?.commands?.find((item) => item.slash?.name === commandName)
+          command?.run(commandName === "herdr-pane" ? "cursor task" : commandName === "herdr-handover" ? "cursor" : "")
+          await new Promise((resolve) => setTimeout(resolve, 25))
+          expect(spawned).toEqual([])
+          expect(executions).toEqual([])
+          expect(toasts).toContainEqual(expect.objectContaining({ message: expect.stringContaining("local workspace is unavailable") }))
+        } finally {
+          await cleanup?.()
+          Bun.spawn = previousSpawn
+          HerdrController.prototype.execute = previousExecute
+          for (const [key, value] of Object.entries(previousEnv)) {
+            if (value === undefined) delete process.env[key]
+            else process.env[key] = value
+          }
+          await rm(root, { recursive: true, force: true })
+        }
+      })
+    }
+  }
 
   test("shows server-enqueued Herdr feedback only for the active session", async () => {
     let onEvent: ((event: any) => void) | undefined

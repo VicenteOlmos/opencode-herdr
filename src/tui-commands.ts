@@ -1,3 +1,4 @@
+import { stat } from "node:fs/promises"
 import { isAbsolute, join } from "node:path"
 import { Plugin } from "@opencode-ai/plugin/tui"
 import { refreshSnapshot, type Snapshot } from "./capabilities.js"
@@ -22,17 +23,12 @@ const run = async (argv: string[]) => {
 export async function registerHerdrCommands(context: TuiContext) {
   const flags = resolvePluginOptions(context.options)
   const defaultRuntime = flags.handoverDefault
-  const directory = context.location?.directory
   const stateDir = join(process.env.XDG_STATE_HOME ?? join(process.env.HOME ?? "/tmp", ".local", "state"), "opencode-herdr")
   let snapshot: Snapshot = { schemaVersion: 1, createdAt: "", herdr: false, runtimes: [], targets: [] }
   let herdr = false
   const apply = (next: Snapshot) => { snapshot = next; herdr = next.herdr }
-  const validDirectory = () => {
-    if (!directory || !isAbsolute(directory)) throw new HerdrError("Herdr local workspace is unavailable")
-    return directory
-  }
-  const runtimeCtx = () => {
-    const cwd = validDirectory()
+  const runtimeCtx = (cwd: string) => {
+    if (!isAbsolute(cwd)) throw new HerdrError("Herdr local workspace is unavailable")
     const workspace = process.env.HERDR_WORKSPACE_ID
     const tab = process.env.HERDR_TAB_ID
     const pane = process.env.HERDR_PANE_ID
@@ -41,7 +37,7 @@ export async function registerHerdrCommands(context: TuiContext) {
     }
     return { cwd, workspace, tab, pane }
   }
-  const controller = () => new HerdrController({ root: "/tmp", ...runtimeCtx(), keepPanes: flags.keepPanes, keepJobs: flags.keepJobs })
+  const controller = (runtime: ReturnType<typeof runtimeCtx>) => new HerdrController({ root: "/tmp", ...runtime, keepPanes: flags.keepPanes, keepJobs: flags.keepJobs })
   const pool = () => new HerdrPool({ run })
   const refresh = async () => {
     const next = await refreshSnapshot(stateDir, { run })
@@ -53,20 +49,34 @@ export async function registerHerdrCommands(context: TuiContext) {
     if (route.type !== "session") throw new HerdrError("Open a session before running a Herdr command")
     return route.sessionID
   }
+  const selectedSession = async () => {
+    const sessionID = routeSession()
+    const session = context.data.session.get(sessionID)
+    const directory = session?.location?.directory
+    if (typeof directory !== "string" || !isAbsolute(directory)) {
+      throw new HerdrError("Herdr local workspace is unavailable")
+    }
+    try {
+      if (!(await stat(directory)).isDirectory()) throw new Error("not a directory")
+    } catch {
+      throw new HerdrError("Herdr local workspace is unavailable")
+    }
+    return { sessionID, directory, runtime: runtimeCtx(directory) }
+  }
   const postSession = async (sessionID: string, markdown: string, tuiAlreadyNotified = false) => {
     await postHerdrFeedback((input) => context.client.session.synthetic(input), sessionID, markdown, { tuiAlreadyNotified })
   }
-  const deps = (sessionID: string): SlashDeps => ({
+  const deps = (selected: Awaited<ReturnType<typeof selectedSession>>): SlashDeps => ({
     snapshot: () => snapshot,
     refresh,
-    runtimeCtx,
+    runtimeCtx: () => selected.runtime,
     run,
     pool,
-    directory: validDirectory(),
+    directory: selected.directory,
     defaultRuntime,
     keepPanes: flags.keepPanes,
     propagatePostSessionError: true,
-    postSession: (text) => postSession(sessionID, text, true),
+    postSession: (text) => postSession(selected.sessionID, text, true),
   })
   const toastError = (error: unknown) => {
     const message = error instanceof Error ? error.message : String(error)
@@ -74,9 +84,9 @@ export async function registerHerdrCommands(context: TuiContext) {
   }
   const toast: ToastFn = async (input) => { context.ui.toast.show(input) }
   const executeSlash = async (handler: (deps: SlashDeps, output: { parts: unknown[] }, toast: ToastFn) => Promise<void>) => {
-    const sessionID = routeSession()
+    const selected = await selectedSession()
     try {
-      await handler(deps(sessionID), { parts: [] }, toast)
+      await handler(deps(selected), { parts: [] }, toast)
     } catch (error) {
       if (!(error instanceof HandoverAbort)) throw error
     }
@@ -100,25 +110,25 @@ export async function registerHerdrCommands(context: TuiContext) {
           command("herdr-test", "Run Herdr checks on this TUI host", () => executeSlash(handleHerdrTest)),
           command("herdr-delete", "Close Herdr job panes on this TUI host", () => executeSlash(handleHerdrDelete)),
           command("herdr-pane", "Delegate a task from this TUI host. Args: <runtime> <task>", async (input) => {
-            const sessionID = routeSession()
+            const selected = await selectedSession()
             const [runtime, ...parts] = input.trim().split(/\s+/)
             const task = parts.join(" ").trim()
             if (!runtime || !task) throw new HerdrError("Usage: /herdr-pane <runtime> <task>")
             await refresh()
             if (!herdr) throw new HerdrError("Herdr unavailable on the TUI host")
             const target = resolvePaneTarget(snapshot.targets, runtime)
-            const result = await controller().execute(target, { prompt: [{ role: "user", content: [{ type: "text", text: task }] }] })
+            const result = await controller(selected.runtime).execute(target, { prompt: [{ role: "user", content: [{ type: "text", text: task }] }] })
             if (result.status !== "done") throw new HerdrError(result.diagnostic || "Herdr task failed")
-            await postSession(sessionID, result.text ?? "")
+            await postSession(selected.sessionID, result.text ?? "")
           }),
           command("herdr-handover", "Hand over to a Herdr pane from this TUI host. Args: <runtime> [note]", async (input) => {
-            const sessionID = routeSession()
+            const selected = await selectedSession()
             await refresh()
             if (!herdr) throw new HerdrError("Herdr unavailable on the TUI host")
-            const ctx = runtimeCtx()
+            const ctx = selected.runtime
             const { runtime, note } = parseHandoverArgs(input)
-            const result = await createHandover({ sessionId: sessionID, directory: ctx.cwd, workspace: ctx.workspace, tab: ctx.tab, pane: ctx.pane, runtime, defaultRuntime, note, stateDir, run })
-            await postSession(sessionID, formatHandoverConfirmation(result))
+            const result = await createHandover({ sessionId: selected.sessionID, directory: selected.directory, workspace: ctx.workspace, tab: ctx.tab, pane: ctx.pane, runtime, defaultRuntime, note, stateDir, run })
+            await postSession(selected.sessionID, formatHandoverConfirmation(result))
           }),
         ],
       }))
