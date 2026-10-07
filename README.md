@@ -1,5 +1,7 @@
 # opencode-herdr
 
+> **OpenCode V2 compatibility — `0.2.0`:** This version targets the OpenCode V2 beta contract and requires the matching `@opencode-ai/cli@0.0.0-beta-17823` runtime (`opencode2`). Native server loading, provider/model catalog registration, concurrent fake-adapter generation, native TUI setup/callbacks/feedback/cleanup, and clean tarball installation (including the npm launcher and automatic companion discovery) are verified against that beta. Compatibility is scoped to this runtime. Physical keyboard input, real provider generation, and the default runtime package downloader remain unverified.
+
 [![npm](https://img.shields.io/npm/v/opencode-herdr.svg)](https://www.npmjs.com/package/opencode-herdr)
 [![license](https://img.shields.io/npm/l/opencode-herdr.svg)](./LICENSE)
 [![GitHub](https://img.shields.io/badge/github-VicenteOlmos%2Fopencode-herdr-181717?logo=github)](https://github.com/VicenteOlmos/opencode-herdr)
@@ -7,7 +9,7 @@
 OpenCode plugin: route selected agents through [Herdr](https://herdr.dev) as `herdr/<adapter>/<nativeModel>` (runtime + model from the id).
 
 Requires Herdr and at least one runtime CLI on `PATH` (`agent`, `claude`, `codex`, or `opencode`).
-This release uses the native OpenCode V2 server plugin API from `@opencode/plugin` and requires OpenCode V2.
+Version `0.2.0` uses the beta `@opencode-ai/plugin` contract and requires the matching `@opencode-ai/cli@0.0.0-beta-17823` runtime (`opencode2`). It does not target the stable `@opencode/plugin` package. Versions earlier than `0.2.0` do not contain this V2 migration.
 
 **Find it:** [npm](https://www.npmjs.com/package/opencode-herdr) · search `opencode herdr` · GitHub topics `opencode` `herdr`
 
@@ -23,7 +25,7 @@ Add the package to `plugins` in `~/.config/opencode/opencode.json`:
 }
 ```
 
-`handoverDefault` is optional. The V2 server plugin registers Herdr providers, models, tools, commands, and agent routing during setup; it does not use the V1 `plugin` configuration or hook contract.
+`handoverDefault` is optional. The server plugin registers Herdr providers, models, tools, and agent routing through the beta catalog API. Mechanical `/herdr-*` commands are callbacks in the `./tui` companion and execute on the local TUI host; they are not server commands and are not prompt templates. Remote/server-only clients do not receive those local callbacks. The server smoke verifies plugin activation and the beta registry's `tui: true` companion declaration, but does not verify interactive TUI rendering or command discovery.
 
 ## Tested runtimes
 
@@ -50,7 +52,7 @@ CLI (no LLM):
 opencode-herdr-handover --runtime cursor --session <id> --cwd <path>
 ```
 
-The V2 server plugin does not provide TUI toasts; its command results use synthetic messages with resume disabled. The bundled Herdr skill is installed idempotently to `~/.config/opencode/skills/herdr/SKILL.md` during plugin setup.
+Mechanical command results are sent as no-reply synthetic session messages with `resume: false`, so reporting a result does not start another model turn. Command execution requires Herdr and the selected runtime to be available on the local TUI host. The bundled Herdr skill is installed idempotently to `~/.config/opencode/skills/herdr/SKILL.md` during plugin setup.
 
 ## Model refs
 
@@ -82,6 +84,8 @@ Close leftovers with `/herdr-delete`.
 ```bash
 bun install && bun test
 ```
+
+Run the opt-in beta native loader smoke with `bun run smoke:v2`. It installs the pinned published beta CLI into an isolated temporary home, uses fake runtime CLIs, and never calls a model provider. Set `OPENCODE_V2_BIN` to an existing matching `opencode2` binary to skip the package download.
 
 ## License
 

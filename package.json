@@ -1,6 +1,6 @@
 {
   "name": "opencode-herdr",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Route OpenCode agents through Herdr panes as herdr/<adapter>/<model> (Cursor, Claude, Codex, OpenCode)",
   "license": "MIT",
   "author": "Vicente Olmos",
@@ -31,7 +31,8 @@
     "llm"
   ],
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./tui": "./src/tui.ts"
   },
   "bin": {
     "opencode-herdr-handover": "./bin/opencode-herdr-handover"
@@ -47,6 +48,7 @@
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit",
     "smoke": "bun run scripts/smoke.ts",
+    "smoke:v2": "bun run scripts/smoke-v2.ts",
     "pack:check": "npm pack --dry-run",
     "publish:npm": "bash scripts/publish.sh"
   },
@@ -55,11 +57,18 @@
   },
   "dependencies": {
     "@ai-sdk/provider": "3.0.8",
-    "@opencode/plugin": "2.0.22"
+    "@opencode-ai/plugin": "0.0.0-beta-17823"
   },
   "devDependencies": {
     "@types/bun": "1.4.2",
+    "solid-js": "1.9.12",
     "typescript": "5.9.3"
+  },
+  "peerDependencies": {
+    "@opencode/theme": ">=2.0.22",
+    "@opentui/core": ">=0.5.14",
+    "@opentui/solid": ">=0.5.14",
+    "solid-js": ">=1.9.0"
   },
   "publishConfig": {
     "access": "public"

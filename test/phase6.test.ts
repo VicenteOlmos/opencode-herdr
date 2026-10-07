@@ -94,13 +94,10 @@ test("6.5 cancel closes owned pane", async () => {
   expect(calls.at(-1)?.slice(0, 3)).toEqual(["herdr", "pane", "close"])
 })
 
-test("6.7 slash harness template distinguishes omitted fields and direct tool data", () => {
+test("6.7 server config does not expose mechanical slash prompts", () => {
   const config: any = {}
   injectConfig(config, [target], { cwd: "/tmp", workspace: "w", tab: "t", pane: "p" })
-  expect(config.command["herdr-pane"].template).toContain("no runtime")
-  expect(config.command["herdr-pane"].template).toContain("no task")
-  expect(config.command["herdr-pane"].template).toContain("both")
-  expect(config.command["herdr-pane"].template).toContain("question")
+  expect(config.command).toBeUndefined()
 })
 
 test("6.7 direct tool uses explicit validated runtime and task", async () => {

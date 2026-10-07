@@ -334,18 +334,12 @@ test("launch error retains no working claim and preserves primary error", async 
   expect(pool.releases[0]?.status).toBe("error")
 })
 
-test("V2 server registers only Herdr-owned commands and posts feedback without resuming", async () => {
+test("V2 server leaves mechanical slash callbacks to the local TUI companion", async () => {
   const { registrations, cleanup } = await createV2Context(HerdrPlugin)
   try {
     expect(registrations.eventSubscriptions).toHaveLength(0)
-    expect(registrations.commands.map((command: any) => command.name)).toEqual([
-      "herdr-pane", "herdr-handover", "herdr-status", "herdr-test", "herdr-delete",
-    ])
-    const pane = registrations.commands.find((command: any) => command.name === "herdr-pane") as any
-    await pane.execute({ sessionID: "session-1", prompt: { text: "" }, delivery: "steer" })
-    expect(registrations.synthetic).toEqual([
-      { sessionID: "session-1", description: "Herdr pane", text: "Usage: /herdr-pane <runtime> <task>", resume: false },
-    ])
+    expect(registrations.commands).toEqual([])
+    expect(registrations.synthetic).toEqual([])
   } finally {
     await cleanup()
   }

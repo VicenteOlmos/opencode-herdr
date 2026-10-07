@@ -66,14 +66,10 @@ test("installHerdrSkill is idempotent", async () => {
   }
 })
 
-test("injectConfig registers herdr slash commands", () => {
+test("configuration injection does not create model-dispatched command templates", () => {
   const config: any = {}
   injectConfig(config, [], { cwd: "/tmp", workspace: "w", tab: "t", pane: "p" })
-  for (const name of ["herdr-pane", "herdr-handover", "herdr-status", "herdr-test", "herdr-delete"]) {
-    expect(config.command[name]?.description).toBeString()
-    expect(config.command[name]?.template).toBeString()
-  }
-  expect(config.command["herdr-test"].description).toContain("random sum")
+  expect(config.command).toBeUndefined()
 })
 
 test("resolveTestRuntime prefers handoverDefault when verified", () => {

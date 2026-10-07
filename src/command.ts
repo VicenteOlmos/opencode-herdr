@@ -20,7 +20,7 @@ export function resolvePaneTarget(targets: Target[], runtime: string) {
 
 export function herdrTools(
   targets: () => Target[],
-  controller: () => HerdrController,
+  controller: (sessionID: string) => Promise<HerdrController>,
   refresh?: () => Promise<void>,
   available: () => boolean = () => true,
 ) {
@@ -29,7 +29,7 @@ export function herdrTools(
       name: "herdr_capabilities",
       description: "List executable Herdr targets",
       input: { type: "object", properties: {}, additionalProperties: false },
-      async execute() {
+      async execute(_input: unknown, context: { sessionID: string }) {
         await refresh?.()
         if (!available()) throw new HerdrError("Herdr unavailable")
         return { content: JSON.stringify(targets().map(({ id, name, adapter, provenance, toolCall }) => ({ id, name, adapter, provenance, toolCall }))) }
@@ -44,7 +44,7 @@ export function herdrTools(
         required: ["runtime", "task"],
         additionalProperties: false,
       },
-      async execute(input: unknown) {
+      async execute(input: unknown, context: { sessionID: string }) {
         if (!available()) throw new HerdrError("Herdr unavailable")
         if (!input || typeof input !== "object") throw new HerdrError("invalid tool input")
         const { runtime, task } = input as { runtime?: unknown; task?: unknown }
@@ -54,7 +54,7 @@ export function herdrTools(
         const options: LanguageModelV3CallOptions = {
           prompt: [{ role: "user", content: [{ type: "text", text: task }] }],
         }
-        const result = await controller().execute(target, options)
+        const result = await (await controller(context.sessionID)).execute(target, options)
         if (result.status !== "done") throw new HerdrError(result.diagnostic || "Herdr task failed")
         return {
           content: result.text ?? "",
