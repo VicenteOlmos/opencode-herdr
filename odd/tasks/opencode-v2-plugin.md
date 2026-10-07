@@ -184,3 +184,11 @@ Implementation tasks OCV2-1 through OCV2-3 remain complete. OCV2-4 is verified a
 - Package metadata and lock bytes equal `0e71e19`; dependency versions unchanged. Physical keyboard, real providers, default downloader and remote-workspace ownership remain unverified.
 - Both Pullfrog inline threads were replied to with regression/CI evidence, then resolved and read back as resolved. PR32 documentation suggestion addressed without dropping 0.1.x support. Initial malformed GraphQL query was rejected before mutation; corrected quoted invocation succeeded once per thread.
 - Integration into main and npm/GitHub publication remain pending, not implied by review closure.
+
+### Chain integration before main
+
+- User resumed authorized integration/publication. Clean sibling integration worktree on tracker branch preserves original dirty workspace. Signed merge `d8f8d4f` incorporates current main `d46bb44` infrastructure without rewriting history.
+- Confirmed child squash merges, leaf-to-root: PR32 `9f76e9f`, PR31 `c5a9925`, PR30 `81d9609`, PR29 `c9a7d19`, PR28 `157901a1ff8695ec6981ee5a22219ebc289a1f7e`. All child PRs MERGED, all resulting commits verified/valid, no attribution.
+- Exact-head test CI before each fold PASS: `37638621977`, `37640450777`, `37640629595`, `37640783932`, `37640930990`. First four folded trees exactly equal `dbeab1f`; final tracker differs only by manual Pullfrog workflow bytes/mode equal current main.
+- Actual final tracker test CI `37641066224` PASS, 120 tests/425 assertions, exact head/current-main binding. Earlier PR28 CI used older base metadata, so final tracker CI is the integrated proof. No unresolved threads or new actionable findings.
+- Next: commit this passive evidence update, verify latest tracker CI, mark tracker ready and signed squash into main under strict policy. OCV2-5 remains open until main readback; OCV2-6 remains open until signed release and npm latest readback.
