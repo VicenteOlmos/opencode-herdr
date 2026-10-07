@@ -64,6 +64,28 @@ describe("OpenCode V2 server plugin contract", () => {
     }
   })
 
+  const routingCases = [
+    { name: "omitted", routing: {}, expectedVariant: "high" },
+    { name: "null", routing: { variant: null }, expectedVariant: "high" },
+    { name: "empty", routing: { variant: "" }, expectedVariant: undefined },
+    { name: "populated", routing: { variant: "low" }, expectedVariant: "low" },
+  ] as const
+
+  for (const routingCase of routingCases) {
+    test(`applies ${routingCase.name} durable variants through the native agent hook`, async () => {
+      const { registrations, cleanup } = await createV2Context(HerdrPlugin, { routing: routingCase.routing })
+      try {
+        expect(registrations.agents.get("build")?.model).toEqual({
+          providerID: "herdr",
+          id: "cursor/agent",
+          ...(routingCase.expectedVariant ? { variant: routingCase.expectedVariant } : {}),
+        })
+      } finally {
+        await cleanup()
+      }
+    })
+  }
+
   test("takes over the beta AISDK provider by its stripped package name", async () => {
     const { registrations, cleanup } = await createV2Context(HerdrPlugin)
     try {
