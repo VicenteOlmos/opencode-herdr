@@ -91,26 +91,26 @@ The current entrypoint uses the OpenCode V1 Plugin/PluginModule contract and ret
   - Commit/proof: `8814403d30186d9dc051a030a42f66e1b55a7130` removes only two orphan theme lock records (4 deletions); all 215 retained records identical. Exact frozen RED → GREEN; 94/341 plus full checks. Independent record guard and current-head CI run `37630880832` PASS; GitHub signature valid.
   - Integration guard: plain conflict-free merge could drop theme records now needed by TUI. Normal merge `86e740f` inherits the correction but preserves the exact prior TUI tree/lock blob; independent tree identity and fresh CI run `37631840627` PASS. No dependency-version changes or final artifact changes.
 
-- [ ] OCV2-5b — Preserve explicit durable effort clearing in native V2 routing.
+- [x] OCV2-5b — Preserve explicit durable effort clearing in native V2 routing.
   - Route: delegated direct; proven regression plus paired implementation/test files.
   - Scope: `src/index.ts`, `test/v2-server.test.ts`, and `test/v2-context.ts` on beta-server branch; the user explicitly approved these exact three paths. No dependencies/workflows/other files.
   - Edit-surface approval: the user approved the exact three-file surface. Signed correction `099ed9f18d05189daab992cc6b33143e04e21a23` is pushed to PR29; normal companion inheritance `97e8510` changes only the same three paths and preserves lock blob `3ef429b71248ea8de1f5f755e28506e3ba734bed`.
   - Independent RED: omitted/null preserve inherited effort, but explicit durable empty retains high instead of clearing. Native beta rejects an empty variant ID; translate durable empty to native omission/default, not `VariantID.make("")`.
   - Checks: deterministic omitted/empty/populated/null cases RED → GREEN; full server checks/CI; propagate final source without changing lock versions. Review thread `PRRT_kwDOTli2KM6p7hY2` on PR28 is resolved only after verified downstream correction and explanatory readback.
-  - Local proof: writer RED 12 pass/1 fail/36 assertions, GREEN 13/36, full server 98/345, typecheck and frozen install pass. Independent focused rerun 13/36 and typecheck PASS. Medium assessed, RDD remains OFF. Current-head CI/downstream propagation/thread resolution pending.
-- [ ] OCV2-5c — Pair native TUI selected session and working directory at command invocation.
+  - Local proof: writer RED 12 pass/1 fail/36 assertions, GREEN 13/36, full server 98/345, typecheck and frozen install pass. Independent focused rerun 13/36 and typecheck PASS. Medium assessed, RDD remains OFF. Current-head PR29 CI `37636352112` PASS, signature verified. Propagated through companion/launcher/release candidate `cdf1a94`; PR28 evidence reply `discussion_r4208267332`, thread read back resolved. Chain integration remains under OCV2-5.
+- [x] OCV2-5c — Pair native TUI selected session and working directory at command invocation.
   - Route: delegated direct; proven session/workspace bug plus paired tests.
   - Scope: `src/tui-commands.ts` and `test/tui.test.ts` on companion branch; no dependencies/workflows/other files.
   - Independent RED: setup A, reactive current location B, selected session B → fake controller cwd A while feedback targets B. Beta supports cross-project selection and context location changes without plugin setup rerunning.
   - Acceptance: selected-session validated local directory resolved at invocation; freeze session/directory pair across awaits; missing/unusable location fails closed. No real handover/provider execution in tests.
-  - Checks: writer RED 6 pass/4 fail/27 assertions; GREEN TUI 19/70 and full companion 117/416; types, lifecycle, supplied beta17823 catalog and whitespace PASS. Independent focused 19/70 + typecheck PASS. Medium assessed, RDD OFF. Selected pair is captured before async stat and retained through execution/feedback. Commit/current CI and thread readback pending.
+  - Checks: writer RED 6 pass/4 fail/27 assertions; GREEN TUI 19/70 and full companion 117/416; types, lifecycle, supplied beta17823 catalog and whitespace PASS. Independent focused 19/70 + typecheck PASS. Medium assessed, RDD OFF. Selected pair is captured before async stat and retained through execution/feedback. Signed correction `29360825d9246286259f3bd5ce0dc6b822110d47`, current-head PR30 CI `37637991718` PASS. PR30 evidence reply `discussion_r4208267834`; thread read back resolved.
   - Limitation: validation proves the directory exists on the TUI host, not ownership of an attached remote workspace; no real providers or keyboard checks claimed.
 
-- [ ] OCV2-5d — Align the security support table with the authorized stable release.
+- [x] OCV2-5d — Align the security support table with the authorized stable release.
   - Route: inline mechanical documentation update; one known row, no code changes.
   - Scope: `SECURITY.md` on release branch.
   - Intent: retain existing `0.1.x` support and add `0.2.x` for the requested stable release; do not silently drop support for older consumers.
-  - Checks: support row added and read back, 0.1.x retained, whitespace clean. Commit/push and PR32 reply pending.
+  - Checks: support row added and read back, 0.1.x retained, whitespace clean. Signed commit `da4fa69` pushed; PR32 support reply `issuecomment-6040314182` confirmed by GraphQL readback.
 
 - [ ] OCV2-6 — Publish and verify the stable release through the existing Trusted Publisher.
   - Route: parent authorized target-bound release/Actions operations; delegated public-registry and artifact verification.
@@ -176,3 +176,11 @@ Implementation tasks OCV2-1 through OCV2-3 remain complete. OCV2-4 is verified a
 
 - Fresh GraphQL inventory for PR27–32: five Pullfrog reviews, two unresolved/non-outdated inline threads (PR28 variant clearing and PR30 session directory). PR29/31 report no new issues; PR32 suggests updating SECURITY support for 0.2.x. Four Socket comments are separate and do not authorize dependency changes.
 - User explicitly requested verifying and resolving Pullfrog comments. Correct and verify code findings, update stable support documentation, then post concise evidence and resolve only proven threads. Original workspace WIP remains untouched.
+
+### Verified Pullfrog closure
+
+- Corrected final source candidate `cdf1a94c324903c2fd1638651a8073d02b08b04f`: independent full 120 tests/425 assertions, typecheck, lifecycle and exact beta17823 catalog PASS. PR31 run `37637994738` and PR32 run `37638003272` PASS with exact head/base binding, valid signatures.
+- Fresh tarball: `/tmp/opencode-herdr-final-verify.CXor1d/pack/opencode-herdr-0.2.0.tgz`, SHA256 `d918d461100b5ca50799ad7d056cded87c231da57c4ae774d5798ffa3784fad7`, 37 files, all bytes/modes match source. Installed CLI usage/exit2 PASS under ignore-scripts/legacy-peer-deps; automatic peer installation is not proved.
+- Package metadata and lock bytes equal `0e71e19`; dependency versions unchanged. Physical keyboard, real providers, default downloader and remote-workspace ownership remain unverified.
+- Both Pullfrog inline threads were replied to with regression/CI evidence, then resolved and read back as resolved. PR32 documentation suggestion addressed without dropping 0.1.x support. Initial malformed GraphQL query was rejected before mutation; corrected quoted invocation succeeded once per thread.
+- Integration into main and npm/GitHub publication remain pending, not implied by review closure.
