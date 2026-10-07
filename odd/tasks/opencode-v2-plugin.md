@@ -112,7 +112,7 @@ The current entrypoint uses the OpenCode V1 Plugin/PluginModule contract and ret
   - Intent: retain existing `0.1.x` support and add `0.2.x` for the requested stable release; do not silently drop support for older consumers.
   - Checks: support row added and read back, 0.1.x retained, whitespace clean. Signed commit `da4fa69` pushed; PR32 support reply `issuecomment-6040314182` confirmed by GraphQL readback.
 
-- [ ] OCV2-6 — Publish and verify the stable release through the existing Trusted Publisher.
+- [x] OCV2-6 — Publish and verify the stable release through the existing Trusted Publisher.
   - Route: parent authorized target-bound release/Actions operations; delegated public-registry and artifact verification.
   - Acceptance: signed release tag satisfies policy; stable/non-prerelease GitHub release at the verified integrated commit; exactly one publishing trigger; successful Actions run; npm version and `latest` readback match the candidate.
   - Scope: npm package `opencode-herdr`, GitHub repository `VicenteOlmos/opencode-herdr`, existing `.github/workflows/publish.yml` only; no local npm tokens or OTP, no other session.
@@ -204,3 +204,12 @@ Implementation tasks OCV2-1 through OCV2-3 remain complete. OCV2-4 is verified a
 - Signed annotated tag `v0.2.0` created and pushed, tag object `bdd43a6a89e6002102321daaf5c4cca7270da962` points to exact main; GitHub verified=true/reason=valid. Registry check at 2026-10-07T15:06:40Z: 0.2.0 absent, latest0.1.3.
 - One stable GitHub release creation attempt (`--verify-tag --latest`) failed with HTTP500. Do not infer successful release or blindly retry. Target-bound readback returned404 for v0.2.0 release; publish.yml run list contained no new release run (latest was Sept21 workflow_dispatch). npm publication was not started.
 - OCV2-6 remains incomplete. Signed tag and integrated source retained; no tag deletion/recreation, no manual workflow dispatch, no local npm credentials. Await a human-approved release-creation retry after failure; no further GitHub mutation in this continuation. This local task-document update is not yet pushed.
+
+### Stable publication verified
+
+- Human explicitly authorized retry after the previous HTTP500. Fresh checks showed no existing release, no new publish run and npm0.2.0 absent. The single retry succeeded: GitHub release ID `405909277`, stable/latest, published `2026-10-07T15:35:18Z`, tag `v0.2.0`, signed object `bdd43a6a89e6002102321daaf5c4cca7270da962` targeting exact integrated main `1c290550c6014b41ce47014011ee1d23a5069482`.
+- Sole release-event workflow `37645115605` completed SUCCESS, exact tag/main binding. Frozen installation, typecheck, tests and Publish steps PASS; logs show GitHub Actions OIDC exchange and npm publication. No workflow_dispatch/re-run or local token/OTP/publish used.
+- Public registry after processing at `15:38:38Z`, independently checked again by parent: version `0.2.0`, dist-tag `latest=0.2.0`. GitHub release latest readback confirmed ID405909277, draft=false/prerelease=false.
+- Published tarball `/tmp/opencode-herdr-published-verify.j__hvs6u/opencode-herdr-0.2.0.tgz`, SHA256 `6ff11ab95fdb13ed0292725fa940f7790c26dafdbc5d828ba5ec75431bb181a6`; registry SHA512/SHA1 integrity PASS. All 37 files have bytes/modes exactly equal the verified local package/main. Compression hash differs from local tarball but content does not. Registry only normalizes bin path by stripping ./; engines/exports/peers/dependencies match.
+- Provenance statements source repository/workflow/tag/commit/run/artifact digest parsed and matched; attestation signatures were not independently cryptographically verified. Real providers, physical keyboard, default downloader and remote-workspace ownership remain unverified, with compatibility scoped to beta17823 as published notes state. Dependencies unchanged, transitive Socket alerts not claimed remediated.
+- OCV2-6 complete. No required release work remains. This after-publication passive recovery document remains on the feature tracking branch; the signed published commit and package are unchanged.
