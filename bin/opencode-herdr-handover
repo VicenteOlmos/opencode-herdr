@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
 # npm-safe launcher; implementation stays Bun TypeScript.
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_PATH=$0
+if [[ "$SCRIPT_PATH" != */* ]]; then
+  SCRIPT_PATH="$(command -v "$SCRIPT_PATH")"
+fi
+while [[ -L "$SCRIPT_PATH" ]]; do
+  SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_PATH")" >/dev/null 2>&1 && pwd -P)"
+  LINK_TARGET="$(readlink "$SCRIPT_PATH")"
+  if [[ "$LINK_TARGET" == /* ]]; then
+    SCRIPT_PATH=$LINK_TARGET
+  else
+    SCRIPT_PATH=$SCRIPT_DIR/$LINK_TARGET
+  fi
+done
+ROOT="$(cd -P "$(dirname "$SCRIPT_PATH")/.." >/dev/null 2>&1 && pwd -P)"
 if ! command -v bun >/dev/null 2>&1; then
   echo "opencode-herdr-handover: bun is required on PATH" >&2
   exit 127

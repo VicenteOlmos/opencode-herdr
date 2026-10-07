@@ -9,10 +9,10 @@ import { HerdrController } from "./controller.js"
 export type HerdrOptions = { targets?: Target[]; execute?: (target: Target, options: LanguageModelV3CallOptions) => Promise<JobResultV1>; controller?: HerdrController; root?: string; cwd?: string; workspace?: string; tab?: string; pane?: string; keepPanes?: boolean; keepJobs?: boolean; debug?: boolean }
 export function createHerdr(options: HerdrOptions = {}) {
   const targets = options.targets ?? []
-  return { languageModel(modelID: string): LanguageModelV3 {
+  return { languageModel(modelID: string, defaultEffort?: string): LanguageModelV3 {
     const target = resolveTarget(targets, modelID)
     if (!target) throw new HerdrError(`Herdr target unavailable: ${modelID}`, "TARGET_UNAVAILABLE")
     const controller = options.controller ?? new HerdrController(options)
-    return createLanguageModel(target, (input) => options.execute ? options.execute(target, input) : controller.execute(target, input))
+    return createLanguageModel(target, (input) => options.execute ? options.execute(target, input) : controller.execute(target, input), defaultEffort)
   } }
 }

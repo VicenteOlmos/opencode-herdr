@@ -30,6 +30,8 @@ export type SlashDeps = {
   keepPanes?: boolean
   /** When set, mechanical results are written into the conversation. */
   postSession?: PostSessionMessage
+  /** V2 command transports must surface transcript failures to the caller. */
+  propagatePostSessionError?: boolean
 }
 
 export async function finishSlash(
@@ -43,15 +45,20 @@ export async function finishSlash(
     /** Also show this markdown in the session transcript (no LLM reply). */
     postSession?: PostSessionMessage
     conversation?: boolean
+    propagatePostSessionError?: boolean
   },
 ) {
   output.parts.splice(0, output.parts.length)
   let postError: string | undefined
+  let postFailure: unknown
+  let postFailed = false
   if (input.conversation !== false && input.postSession) {
     const md = `## ${input.title}\n\n${input.message}`
     try {
       await input.postSession(md)
     } catch (error) {
+      postFailed = true
+      postFailure = error
       postError = error instanceof Error ? error.message : "session post failed"
     }
   }
@@ -59,6 +66,7 @@ export async function finishSlash(
     ? `${input.message}\n\n(conversation post failed: ${postError})`
     : input.message
   await toast({ title: input.title, message: toastMessage, variant: input.variant, duration: 8_000 })
+  if (input.propagatePostSessionError && postFailed) throw postFailure
   throw new HandoverAbort(input.summary)
 }
 
@@ -275,6 +283,7 @@ export async function handleHerdrStatus(deps: SlashDeps, output: { parts: unknow
     variant: snapshot.herdr && snapshot.targets.length ? "success" : snapshot.herdr ? "warning" : "error",
     summary: message,
     postSession: deps.postSession,
+    propagatePostSessionError: deps.propagatePostSessionError,
     conversation: true,
   })
 }
@@ -329,6 +338,7 @@ export async function handleHerdrTest(deps: SlashDeps, output: { parts: unknown[
     variant: ok ? "success" : snapshot.herdr ? "warning" : "error",
     summary: `${ok ? "PASS" : "FAIL"} · ${smoke} · ${agentProbe}`,
     postSession: deps.postSession,
+    propagatePostSessionError: deps.propagatePostSessionError,
     conversation: true,
   })
 }
@@ -342,6 +352,7 @@ export async function handleHerdrDelete(deps: SlashDeps, output: { parts: unknow
       variant: "warning",
       summary: message,
       postSession: deps.postSession,
+      propagatePostSessionError: deps.propagatePostSessionError,
       conversation: true,
     })
   }
@@ -357,6 +368,7 @@ export async function handleHerdrDelete(deps: SlashDeps, output: { parts: unknow
       variant: "success",
       summary: message,
       postSession: deps.postSession,
+      propagatePostSessionError: deps.propagatePostSessionError,
       conversation: true,
     })
   } catch (error) {
@@ -367,6 +379,7 @@ export async function handleHerdrDelete(deps: SlashDeps, output: { parts: unknow
       variant: "error",
       summary: message,
       postSession: deps.postSession,
+      propagatePostSessionError: deps.propagatePostSessionError,
       conversation: true,
     })
   }

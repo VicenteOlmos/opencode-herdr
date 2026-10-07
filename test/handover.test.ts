@@ -105,10 +105,10 @@ test("createHandover uses herdr tab pool + agent start --kind", async () => {
   }
 })
 
-test("injectConfig registers herdr-handover command", () => {
+test("injectConfig leaves mechanical handover callback to the TUI companion", () => {
   const config: any = {}
   injectConfig(config, [target], { cwd: "/tmp", workspace: "w", tab: "t", pane: "p" })
-  expect(config.command["herdr-handover"].description).toContain("Hand over")
+  expect(config.command).toBeUndefined()
 })
 
 test("resolvePaneTarget accepts adapter or target id", () => {
