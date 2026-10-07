@@ -28,7 +28,7 @@ The current entrypoint uses the OpenCode V1 Plugin/PluginModule contract and ret
 - Branch point / initial review boundary: `0881d41`.
 - Delivery strategy: `ask-on-risk`.
 - Forecast: 450–700 authored changed lines, excluding generated lockfiles.
-- Running committed authored count: 2,213 implementation/test/documentation lines (924 initial + 780 actual-beta server reconciliation + 390 companion + 119 launcher correction/proof docs), excluding generated lockfile and task tracking (tracking commit `f845e9f`: 65 lines).
+- Running committed authored count: 2,219 implementation/test/documentation/release-metadata lines (924 initial + 780 actual-beta server reconciliation + 390 companion + 119 launcher correction/proof docs + 6 release metadata), excluding generated lockfile and task tracking (tracking commit `f845e9f`: 65 lines).
 - Chain strategy: `feature-branch-chain`, explicitly selected by user (option 1).
 - Local chain: tracker `feat/opencode-v2-plugin` -> initial `feat/opencode-v2-01-server` (`84db6dc`) -> reconciliation `feat/opencode-v2-03-server` (`c04e8a5`) -> companion `feat/opencode-v2-04-feedback` (`a9ec0bc`). The original dirty `feat/opencode-v2-02-feedback` is preserved as recovery WIP, not a delivery slice. Remote delivery is now authorized only within the scope above.
 - Server slice `size:exception`: explicitly accepted by user (yes) for 924 authored lines plus generated lockfile; retain tests and docs with the API migration.
@@ -66,13 +66,16 @@ The current entrypoint uses the OpenCode V1 Plugin/PluginModule contract and ret
   - Proof: clean `f615bd3` tarball installed 202 packages and imports/closure passed, but installed launcher exits1 (`node_modules/src/handover-cli.ts` missing); direct package invocation has expected usage exit2. Native package scenarios were not launched after failed preflight. No correction made yet.
   - Commit: `9a1fb43f094388e263fb6c89a1df55a91aad813c` on `fix/opencode-v2-installed-launcher`, parent `f615bd3`; 119 authored lines including the passive README proof update. Risk high/unassessable, RDD OFF/unmanaged. Observed RED 1 pass/2 fail → GREEN 3 tests/9 assertions; independent 103 tests/370 expectations and fresh installed/native package proof PASS. ShellCheck unavailable; physical keyboard, real providers and default runtime downloader remain untested.
 
-- [ ] OCV2-4 — Prepare the stable V2 release metadata and verify the exact release candidate.
+- [x] OCV2-4 — Prepare the stable V2 release metadata and verify the exact release candidate.
   - Route: delegated direct; metadata/documentation preparation and test/build/install verification triggers.
   - Scope: new `chore/opencode-v2-05-release` child branch from `3157442`; `package.json` and `README.md` only, with parent-owned tracking in this document.
   - Plan: verify that `0.2.0` is unpublished before selecting it; make the V2 compatibility boundary explicit and keep all dependency pins and the runtime source unchanged.
   - Acceptance: available new version; exact dependency and executable bytes preserved; package metadata/docs coherent; CI-compatible full checks and final artifact inspection pass.
   - Checks: exact workflow Bun version where available; full tests, typecheck, lifecycle smoke, supplied-beta catalog smoke, pack dry-run/tarball, launcher regression and whitespace. No artificial RED is applicable to a metadata-only release bump.
   - Forecast: 20–80 authored metadata/documentation lines, plus passive tracking.
+  - Commit: `61c864bca4b1e6130595c929026bc09f789d39ed` (`chore(release): prepare 0.2.0 for OpenCode V2`), parent `f973dbf`; exact metadata delta is 3 additions/3 deletions.
+  - Proof: writer and independent verifier used Bun 1.3.10; frozen install, 103 tests/370 expectations, typecheck, lifecycle smoke, launcher 3 tests/9 expectations, shell syntax, pack and whitespace all passed. Missing cached beta binary was recovered in an isolated public-registry tool workspace; the exact beta17823 supplied-runtime catalog/no-generation smoke passed. Parent spot check: `git diff --check`.
+  - Artifact: 0.2.0, 37 files, SHA256 `568112e9f873b535797991716ed407e6c63bb55c1981c38aa94dba1467210437`; all source/bin/skills/license bytes and modes match `3157442`, dependency fields and `bun.lock` unchanged. Native risk medium/configuration change; RDD OFF/unmanaged; independent verification PASS. Public registry confirmed version available at 2026-10-07T13:17:38Z. Publication-neutral README preserves exact beta scope and prior functional limits.
 - [ ] OCV2-5 — Deliver and integrate the feature-branch chain under current repository policy.
   - Route: delegated verification for each child snapshot and CI; parent performs authorized Git/`gh` delivery operations.
   - Acceptance: tracker draft/no-merge while children are pending; each child targets its immediate parent; observed required `test` checks pass; signatures verified by GitHub; child integration preserves final source and current `main` infrastructure.
@@ -180,4 +183,12 @@ main 0881d41
 
 ## Next step
 
-Implementation tasks OCV2-1 through OCV2-3 remain complete. Execute OCV2-4 through OCV2-6 in order under the explicit delivery/session authorization above. New version `0.2.0` is only a candidate until exact availability is checked. Keep all dependency pins unchanged; Socket findings are documented, not remediated. The clean packaging worktree and dirty root recovery WIP must be preserved. The original functional limits (physical keyboard, real providers, default downloader, unavailable ShellCheck) remain disclosed rather than fabricated proof.
+Implementation tasks OCV2-1 through OCV2-3 remain complete. OCV2-4 is verified and committed. Execute OCV2-5 and OCV2-6 in order under the explicit delivery/session authorization above. Version `0.2.0` was confirmed unpublished and is now prepared; no publication has occurred. Keep all dependency pins unchanged; Socket findings are documented, not remediated. The clean packaging worktree and dirty root recovery WIP must be preserved. The original functional limits (physical keyboard, real providers, default downloader, unavailable ShellCheck) remain disclosed rather than fabricated proof.
+
+## Authorized remote delivery snapshot
+
+- Delivery authorization: exact GitHub target/session and Actions Trusted Publishing confirmed by user; actual repository-policy override also confirmed. No issue/type/size labels or forms will be added.
+- Current main infrastructure-only addition `d46bb44` is a manual-dispatch Pullfrog workflow and will be preserved, not launched or modified.
+- Actual PR delta budgets (additions + deletions, generated/tracking included): tracker 65; initial server 1,486; beta reconciliation 1,307; companion 426; launcher plus release-authorization tracking 170; release metadata 6 before final passive proof tracking. Keep the accepted coherent over-budget rationale; do not code-golf or add absent labels.
+- Release child: `chore/opencode-v2-05-release`, source commit `61c864b`, targets `fix/opencode-v2-installed-launcher`. Tracker must stay draft/no-merge until all five changes are reviewed and integrated.
+- All local commits are signed (local Git reports unknown trust `U`); GitHub signature verification is pending push/readback and must not be prechecked in PR bodies.
