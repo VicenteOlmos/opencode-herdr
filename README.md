@@ -1,6 +1,6 @@
 # opencode-herdr
 
-> **V2 migration status:** This branch targets the published OpenCode 2.0 beta contracts. Native server loading, provider/model catalog registration, concurrent fake-adapter generation, native TUI setup/callbacks/feedback/cleanup, and clean tarball installation (including the npm launcher and automatic companion discovery) are verified against beta `0.0.0-beta-17823`. Compatibility is scoped to that runtime. Physical keyboard input, real provider generation, and the default runtime package downloader remain unverified. These V2 changes are not published yet.
+> **OpenCode V2 compatibility — `0.2.0`:** This version targets the OpenCode V2 beta contract and requires the matching `@opencode-ai/cli@0.0.0-beta-17823` runtime (`opencode2`). Native server loading, provider/model catalog registration, concurrent fake-adapter generation, native TUI setup/callbacks/feedback/cleanup, and clean tarball installation (including the npm launcher and automatic companion discovery) are verified against that beta. Compatibility is scoped to this runtime. Physical keyboard input, real provider generation, and the default runtime package downloader remain unverified.
 
 [![npm](https://img.shields.io/npm/v/opencode-herdr.svg)](https://www.npmjs.com/package/opencode-herdr)
 [![license](https://img.shields.io/npm/l/opencode-herdr.svg)](./LICENSE)
@@ -9,7 +9,7 @@
 OpenCode plugin: route selected agents through [Herdr](https://herdr.dev) as `herdr/<adapter>/<nativeModel>` (runtime + model from the id).
 
 Requires Herdr and at least one runtime CLI on `PATH` (`agent`, `claude`, `codex`, or `opencode`).
-This branch uses the beta `@opencode-ai/plugin` contract and requires the matching `@opencode-ai/cli@0.0.0-beta-17823` runtime (`opencode2`). It does not target the stable `@opencode/plugin` package.
+Version `0.2.0` uses the beta `@opencode-ai/plugin` contract and requires the matching `@opencode-ai/cli@0.0.0-beta-17823` runtime (`opencode2`). It does not target the stable `@opencode/plugin` package. Versions earlier than `0.2.0` do not contain this V2 migration.
 
 **Find it:** [npm](https://www.npmjs.com/package/opencode-herdr) · search `opencode herdr` · GitHub topics `opencode` `herdr`
 
