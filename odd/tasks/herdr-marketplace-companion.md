@@ -36,9 +36,9 @@ The npm package exports OpenCode plugins, while Herdr marketplace discovers nati
   - Route: delegated verification; isolated command execution with the exact manifest argv, no host configuration.
   - Acceptance: first install succeeds, JSONC unrelated field/comment preserved, repeat is byte-idempotent, correct published package installed; no unsupported UI activation claims.
   - Checks: exact beta17823 native installer owned fixture, contract/type/full suite readback, manifest fields against Herdr v0.9.3 schema; parent spot check and native risk assessment.
-- [ ] HMP-3 — Publish through default-branch discovery.
+- [x] HMP-3 — Publish through default-branch discovery.
   - Route: parent authorized GitHub metadata/PR operations plus bounded verification.
-  - Acceptance: verified signed feature merged under current main policy, valid manifest on default branch, existing topics preserved plus `herdr-plugin`, topic/default-branch readback; public marketplace discovery verified or clearly pending its documented 30-minute refresh.
+  - Acceptance: Pullfrog finishes and all current comments are verified/resolved, then verified signed feature merged under current main policy, valid manifest on default branch, existing topics preserved plus `herdr-plugin`, topic/default-branch readback; public marketplace discovery verified or clearly pending its documented 30-minute refresh.
   - Checks: target-bound authorization for configured gh session, current rules/CI/head/signatures/threads, exact integrated tree, repository topics and public index without credentials. Unknown writes stop, no blind retries.
 
 ## Evidence and next step
@@ -62,3 +62,19 @@ The npm package exports OpenCode plugins, while Herdr marketplace discovers nati
 
 - User answered yes to the exact target, push/PR/merge/topic operations and configured gh session. Fresh target is public, viewerPermission ADMIN, default main1c29055 unchanged; no existing remote feature branch/open PR. Main requires strict test, signed linear history, resolved threads and zero approvals. Actual lowercase PR template applies; generic forms/issue/labels waiver remains.
 - Public index endpoint: https://assets.herdr.dev/plugins/index.json (schemaVersion1); snapshot generated2026-10-07T16:01:12.325Z has no opencode-herdr entry. Topic/default-branch registration is not yet performed; index refresh every30minutes can lag registration. No npm/GitHubrelease/tag action will be used.
+
+## PR33 review wait
+
+- PR33 created/read back OPEN, ready, head `a6366049861efb76ff832d9ae07851aa15281d00` against main1c29055; 120 additions/0 deletions across4files, all3featurecommitsGitHubverified/valid. URL https://github.com/VicenteOlmos/opencode-herdr/pull/33.
+- Latest user instruction: wait for Pullfrog to finish, verify its comments and resolve them before merge or topic publication. This is a user-required delivery check even though only test is required by main rules. No merge/topic mutation has occurred.
+- Keep the reviewed candidate fixed while waiting; this task-document update is local and not pushed yet, to avoid creating a new candidate unnecessarily. Current source remains identical to the independently checked manifest/test/README.
+
+## Publication complete
+
+- User-required Pullfrog wait satisfied before mutation: check `112899224804` completedSUCCESS on candidate `a636604`; review `5445319872` reported no new issues, with zero inline comments or threads. Review workflow `37652518352` completedSUCCESS; its main-workflow SHA differs from the PR, but the external check/submitted review bind the actual candidate. No corrections or resolution mutations were needed.
+- Required PR33 CI `37652512213` PASS, exacthead/base binding. PR33 signed squash merged `2026-10-07T16:35:23Z`, main `261ed990c5837b462dfe0d6d581aa38cf4144bd3`; signature verified/valid and tree exactly equal reviewed candidate. Main push CI `37653237274` PASS.
+- Added only the `herdr-plugin` topic via purpose-built gh repo edit; all10pre-existing topics preserved. Default main contains the valid native manifest. No npm publish/GitHubrelease/tag was created by this companion publication; existing npm0.2.0/latest unchanged.
+- Fresh public index https://assets.herdr.dev/plugins/index.json checked `2026-10-07T17:04:18Z`: schemaVersion1, generatedAt `2026-10-07T17:01:03.898Z`; exact repo `VicenteOlmos/opencode-herdr` appears with headCommit `261ed990c5837b462dfe0d6d581aa38cf4144bd3`, manifest path `herdr-plugin.toml`, id `opencode-herdr`, name `OpenCode Herdr`, version `0.1.0`, minimumHerdrVersion `0.9.3`, platforms linux/macos, firstSeenAt matching generatedAt.
+- Source catalog before registration was stale16:30 and absent; the next17:01 refresh includes the plugin. No stale-cache inference or repeated remote mutation after interruption/restart. Public reads used normal User-Agent/Accept headers, not credentials/challenge bypass.
+- All HMP tasks complete. Marketplace catalog visibility is verified; interactive Herdr/OpenCode UI activation, physical keyboard and real-provider generation remain outside the bounded proof. Existing original dirty workspace and npm runtime/dependencies preserved.
+- This after-delivery passive recovery record remains on the feature tracking branch; the indexed reviewed default-branch commit is unchanged. Active next step: none required for marketplace publication.
