@@ -16,7 +16,7 @@ The npm package exports OpenCode plugins, while Herdr marketplace discovers nati
 - Native manifest version starts at 0.1.0, separate from the pinned npm version. Require Herdr >=0.9.3 conservatively, with Linux/macOS platforms.
 - Preserve npm entrypoints, package metadata, lock, dependencies, existing tests and original dirty workspace. No npm release or GitHub release/tag is needed for marketplace discovery.
 - No host-home installation or real-provider generation. Native probes use isolated temporary HOME/XDG and scrubbed credentials.
-- GitHub topic publication requires explicit target/operation/session authorization before mutation; existing repo is `VicenteOlmos/opencode-herdr`, configured gh session.
+- User explicitly authorized feature push, PR creation/merge and adding the `herdr-plugin` topic in `VicenteOlmos/opencode-herdr` through the configured gh session; preserve existing topics.
 
 ## Delivery strategy
 
@@ -54,6 +54,11 @@ The npm package exports OpenCode plugins, while Herdr marketplace discovers nati
 - Native assessment initially high/unassessable because parent task document was untracked; after explicitly staging it the exact candidate is medium (configuration_change herdr-plugin.toml). RDD remains OFF; independent verification was retained. Total implementation/tracking candidate105authoredlines, under planning budget.
 - HMP-2 independent focused1/4, full121/429, types/stagedwhitespace PASS. Actual manifest argv ran in owned scrubbed fixture `/tmp/opencode-herdr-manifest-action-6diMz5`: firstexit0 installs/configures pinned0.2.0; repeatexit0 alreadyconfigured/config byte-identical. Existing disabled plugin entry, schema and JSONC comment preserved, exactlyone pinnedentry. No fixture symlinks escape; package root/TUI export files exist.
 - Tagged officialHerdrv0.9.3 schema validates metadata/globalcontext/literalargv/platforminheritance; no additional permission or entrypoint required. Native UI activation and marketplace visibility are not claimed.
-- HMP-3 remains pending explicit authorization for feature push/PR/merge and adding the herdr-plugin topic in VicenteOlmos/opencode-herdr through the configured gh session. No remote publication has begun; native manifest version0.1.0 remains separate from npm0.2.0.
+- HMP-3 remains pending delivery, with explicit user authorization for feature push/PR/merge and adding the herdr-plugin topic in VicenteOlmos/opencode-herdr through the configured gh session. No remote publication has begun; native manifest version0.1.0 remains separate from npm0.2.0.
 
 - HMP-1/HMP-2 work-unit evidence commit: `f24c02b6cd070bc47a86be1f113b095d2f05d5de`, Conventional Commit signed using existing local configuration; remote GitHub signature readback is pending authorization/push. Rollback is the manifest/test/README companion section only, preserving existing npm behavior.
+
+## Publication preflight
+
+- User answered yes to the exact target, push/PR/merge/topic operations and configured gh session. Fresh target is public, viewerPermission ADMIN, default main1c29055 unchanged; no existing remote feature branch/open PR. Main requires strict test, signed linear history, resolved threads and zero approvals. Actual lowercase PR template applies; generic forms/issue/labels waiver remains.
+- Public index endpoint: https://assets.herdr.dev/plugins/index.json (schemaVersion1); snapshot generated2026-10-07T16:01:12.325Z has no opencode-herdr entry. Topic/default-branch registration is not yet performed; index refresh every30minutes can lag registration. No npm/GitHubrelease/tag action will be used.
