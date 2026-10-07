@@ -6,7 +6,13 @@ import { publishSnapshot, type Snapshot } from "../src/capabilities.js"
 
 export async function createV2Context(
   plugin: typeof HerdrPlugin,
-  options: { syntheticError?: Error; holdRefresh?: boolean; reloadError?: Error; sessionDirectories?: Record<string, string> } = {},
+  options: {
+    syntheticError?: Error
+    holdRefresh?: boolean
+    reloadError?: Error
+    sessionDirectories?: Record<string, string>
+    routing?: { variant?: string | null }
+  } = {},
 ) {
   const home = await mkdtemp(join(tmpdir(), "herdr-v2-"))
   const config = join(home, "config")
@@ -33,7 +39,7 @@ export async function createV2Context(
   await publishSnapshot(join(state, "opencode-herdr"), snapshot)
   await writeFile(join(xdgConfig, "herdr-routing.json"), JSON.stringify({
     schemaVersion: 1,
-    assignments: { build: { model: target.id, variant: "high" } },
+    assignments: { build: { model: target.id, ...(options.routing ?? { variant: "high" }) } },
   }))
 
   const previousEnv = { HOME: process.env.HOME, XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME, XDG_STATE_HOME: process.env.XDG_STATE_HOME }
@@ -49,7 +55,7 @@ export async function createV2Context(
     sdk: [] as Array<(event: any) => void>,
     language: [] as Array<(event: any) => void>,
     sessionHooks: [] as Array<{ name: string; callback: (event: any) => void | Promise<void> }>,
-    agents: new Map<string, any>([["build", {}]]),
+    agents: new Map<string, any>([["build", { model: { variant: "high" } }]]),
     synthetic: [] as unknown[],
     eventSubscriptions: [] as unknown[],
     catalogTransforms: [] as Array<(editor: any) => void>,

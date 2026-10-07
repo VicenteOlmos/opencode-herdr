@@ -119,9 +119,11 @@ export const HerdrPlugin = Plugin.define({
         if (!assignment.model.startsWith("herdr/")) continue
         const model = Model.Ref.parse(assignment.model)
         editor.update(agentID, (agent) => {
-          const variant = assignment.variant
-            ? Model.VariantID.make(assignment.variant)
-            : agent.model?.variant
+          let variant = agent.model?.variant
+          if (assignment.variant !== undefined) {
+            if (assignment.variant === "") variant = undefined
+            else variant = Model.VariantID.make(assignment.variant)
+          }
           agent.model = { ...model, ...(variant ? { variant } : {}) }
         })
       }
