@@ -76,7 +76,7 @@ The current entrypoint uses the OpenCode V1 Plugin/PluginModule contract and ret
   - Commit: `61c864bca4b1e6130595c929026bc09f789d39ed` (`chore(release): prepare 0.2.0 for OpenCode V2`), parent `f973dbf`; exact metadata delta is 3 additions/3 deletions.
   - Proof: writer and independent verifier used Bun 1.3.10; frozen install, 103 tests/370 expectations, typecheck, lifecycle smoke, launcher 3 tests/9 expectations, shell syntax, pack and whitespace all passed. Missing cached beta binary was recovered in an isolated public-registry tool workspace; the exact beta17823 supplied-runtime catalog/no-generation smoke passed. Parent spot check: `git diff --check`.
   - Artifact: 0.2.0, 37 files, SHA256 `568112e9f873b535797991716ed407e6c63bb55c1981c38aa94dba1467210437`; all source/bin/skills/license bytes and modes match `3157442`, dependency fields and `bun.lock` unchanged. Native risk medium/configuration change; RDD OFF/unmanaged; independent verification PASS. Public registry confirmed version available at 2026-10-07T13:17:38Z. Publication-neutral README preserves exact beta scope and prior functional limits.
-- [ ] OCV2-5 — Deliver and integrate the feature-branch chain under current repository policy.
+- [x] OCV2-5 — Deliver and integrate the feature-branch chain under current repository policy.
   - Route: delegated verification for each child snapshot and CI; parent performs authorized Git/`gh` delivery operations.
   - Acceptance: tracker draft/no-merge while children are pending; each child targets its immediate parent; observed required `test` checks pass; signatures verified by GitHub; child integration preserves final source and current `main` infrastructure.
   - Policy: authorized actor has `ADMIN`; main ruleset requires PRs, strict `test`, signed commits, linear history, thread resolution, and allows squash/rebase. No admin bypass. Existing over-budget cohesive slices retain their previously accepted rationale without adding absent labels.
@@ -192,3 +192,8 @@ Implementation tasks OCV2-1 through OCV2-3 remain complete. OCV2-4 is verified a
 - Exact-head test CI before each fold PASS: `37638621977`, `37640450777`, `37640629595`, `37640783932`, `37640930990`. First four folded trees exactly equal `dbeab1f`; final tracker differs only by manual Pullfrog workflow bytes/mode equal current main.
 - Actual final tracker test CI `37641066224` PASS, 120 tests/425 assertions, exact head/current-main binding. Earlier PR28 CI used older base metadata, so final tracker CI is the integrated proof. No unresolved threads or new actionable findings.
 - Next: commit this passive evidence update, verify latest tracker CI, mark tracker ready and signed squash into main under strict policy. OCV2-5 remains open until main readback; OCV2-6 remains open until signed release and npm latest readback.
+
+### Main integration complete
+
+- PR27 marked ready only after exact tracker head `3c8a2c3` required CI `37641482198` PASS. Signed squash into main `1c290550c6014b41ce47014011ee1d23a5069482`, state MERGED readback, signature verified/valid and tree exactly equal `3c8a2c3`. All PR27–32 MERGED; no bypass or branch deletion.
+- OCV2-5 complete. Clean detached sibling `v2-published-main` pins the exact integrated main for publication checks; original dirty WIP and all existing branches/worktrees preserved. OCV2-6 pending signed tag, GitHub stable release, one existing Actions publish trigger, public npm version/latest continuity.
