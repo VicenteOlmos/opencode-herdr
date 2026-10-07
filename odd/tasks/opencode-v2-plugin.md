@@ -93,16 +93,24 @@ The current entrypoint uses the OpenCode V1 Plugin/PluginModule contract and ret
 
 - [ ] OCV2-5b — Preserve explicit durable effort clearing in native V2 routing.
   - Route: delegated direct; proven regression plus paired implementation/test files.
-  - Scope: `src/index.ts` and `test/v2-server.test.ts` on beta-server branch; no dependencies/workflows/other files.
-  - Pending edit-surface decision: writer stopped without edits because `test/v2-context.ts` hardcodes the routing assignment before setup. Proposed exact surfaces are `src/index.ts`, `test/v2-server.test.ts`, and `test/v2-context.ts`; the third path remains unauthorized until the human confirms.
+  - Scope: `src/index.ts`, `test/v2-server.test.ts`, and `test/v2-context.ts` on beta-server branch; the user explicitly approved these exact three paths. No dependencies/workflows/other files.
+  - Edit-surface approval: the user approved the exact three-file surface. Signed correction `099ed9f18d05189daab992cc6b33143e04e21a23` is pushed to PR29; normal companion inheritance `97e8510` changes only the same three paths and preserves lock blob `3ef429b71248ea8de1f5f755e28506e3ba734bed`.
   - Independent RED: omitted/null preserve inherited effort, but explicit durable empty retains high instead of clearing. Native beta rejects an empty variant ID; translate durable empty to native omission/default, not `VariantID.make("")`.
   - Checks: deterministic omitted/empty/populated/null cases RED → GREEN; full server checks/CI; propagate final source without changing lock versions. Review thread `PRRT_kwDOTli2KM6p7hY2` on PR28 is resolved only after verified downstream correction and explanatory readback.
+  - Local proof: writer RED 12 pass/1 fail/36 assertions, GREEN 13/36, full server 98/345, typecheck and frozen install pass. Independent focused rerun 13/36 and typecheck PASS. Medium assessed, RDD remains OFF. Current-head CI/downstream propagation/thread resolution pending.
 - [ ] OCV2-5c — Pair native TUI selected session and working directory at command invocation.
   - Route: delegated direct; proven session/workspace bug plus paired tests.
   - Scope: `src/tui-commands.ts` and `test/tui.test.ts` on companion branch; no dependencies/workflows/other files.
   - Independent RED: setup A, reactive current location B, selected session B → fake controller cwd A while feedback targets B. Beta supports cross-project selection and context location changes without plugin setup rerunning.
   - Acceptance: selected-session validated local directory resolved at invocation; freeze session/directory pair across awaits; missing/unusable location fails closed. No real handover/provider execution in tests.
-  - Checks: deterministic cross-workspace/session-change/missing-location cases RED → GREEN; full companion checks and independent verification/current CI. Review thread `PRRT_kwDOTli2KM6p7mqO` on PR30 resolved only after actual correction.
+  - Checks: writer RED 6 pass/4 fail/27 assertions; GREEN TUI 19/70 and full companion 117/416; types, lifecycle, supplied beta17823 catalog and whitespace PASS. Independent focused 19/70 + typecheck PASS. Medium assessed, RDD OFF. Selected pair is captured before async stat and retained through execution/feedback. Commit/current CI and thread readback pending.
+  - Limitation: validation proves the directory exists on the TUI host, not ownership of an attached remote workspace; no real providers or keyboard checks claimed.
+
+- [ ] OCV2-5d — Align the security support table with the authorized stable release.
+  - Route: inline mechanical documentation update; one known row, no code changes.
+  - Scope: `SECURITY.md` on release branch.
+  - Intent: retain existing `0.1.x` support and add `0.2.x` for the requested stable release; do not silently drop support for older consumers.
+  - Checks: support row added and read back, 0.1.x retained, whitespace clean. Commit/push and PR32 reply pending.
 
 - [ ] OCV2-6 — Publish and verify the stable release through the existing Trusted Publisher.
   - Route: parent authorized target-bound release/Actions operations; delegated public-registry and artifact verification.
@@ -163,3 +171,8 @@ Implementation tasks OCV2-1 through OCV2-3 remain complete. OCV2-4 is verified a
 - Initial remote `test` CI: #27/#28/#30/#31/#32 PASS, #29 FAIL at frozen installation; all current heads/bases matched and unresolved review threads were zero. `test` is required only on tracker-to-main, but every child must still pass its own substantive checks. Optional `pullfrog` checks were pending. No child, tracker, tag, release, or publication has been merged/created beyond these PRs.
 
 - Ordinary review claims reproduced independently in one read-only batch: P2 durable-empty variant regression and P1 selected-session/setup-cwd mismatch, 0 pass/2 fail/5 assertions with fake controller and actual plugin hooks. Both are candidate-caused; no automatic thread resolution or unproved native-empty sentinel assumption. OCV2-5b/5c remain pending; no integration/publication proceeds until correction proof.
+
+### Pullfrog inventory and authorized corrections
+
+- Fresh GraphQL inventory for PR27–32: five Pullfrog reviews, two unresolved/non-outdated inline threads (PR28 variant clearing and PR30 session directory). PR29/31 report no new issues; PR32 suggests updating SECURITY support for 0.2.x. Four Socket comments are separate and do not authorize dependency changes.
+- User explicitly requested verifying and resolving Pullfrog comments. Correct and verify code findings, update stable support documentation, then post concise evidence and resolve only proven threads. Original workspace WIP remains untouched.
