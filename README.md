@@ -1,6 +1,6 @@
 # opencode-herdr
 
-> **OpenCode V2 compatibility — `0.2.0`:** This version targets the OpenCode V2 beta contract and requires the matching `@opencode-ai/cli@0.0.0-beta-17823` runtime (`opencode2`). Native server loading, provider/model catalog registration, concurrent fake-adapter generation, native TUI setup/callbacks/feedback/cleanup, and clean tarball installation (including the npm launcher and automatic companion discovery) are verified against that beta. Compatibility is scoped to this runtime. Physical keyboard input, real provider generation, and the default runtime package downloader remain unverified.
+> **OpenCode V2 compatibility — `0.2.1`:** This version targets the OpenCode V2 beta contract and requires the matching `@opencode-ai/cli@0.0.0-beta-17823` runtime (`opencode2`). Native server loading, provider/model catalog registration, concurrent fake-adapter generation, native TUI setup/callbacks/feedback/cleanup, and clean tarball installation (including the npm launcher and automatic companion discovery) are verified against that beta. The packed model menu additionally has native keyboard/selector coverage. Compatibility is scoped to this runtime; real provider generation and the default runtime package downloader remain unverified.
 
 [![npm](https://img.shields.io/npm/v/opencode-herdr.svg)](https://www.npmjs.com/package/opencode-herdr)
 [![license](https://img.shields.io/npm/l/opencode-herdr.svg)](./LICENSE)
@@ -9,7 +9,7 @@
 OpenCode plugin: route selected agents through [Herdr](https://herdr.dev) as `herdr/<adapter>/<nativeModel>` (runtime + model from the id).
 
 Requires Herdr and at least one runtime CLI on `PATH` (`agent`, `claude`, `codex`, or `opencode`).
-Version `0.2.0` uses the beta `@opencode-ai/plugin` contract and requires the matching `@opencode-ai/cli@0.0.0-beta-17823` runtime (`opencode2`). It does not target the stable `@opencode/plugin` package. Versions earlier than `0.2.0` do not contain this V2 migration.
+Version `0.2.x` uses the beta `@opencode-ai/plugin` server contract and requires the matching `@opencode-ai/cli@0.0.0-beta-17823` runtime (`opencode2`). The server does not target the stable `@opencode/plugin` package. Versions earlier than `0.2.0` do not contain this V2 migration.
 
 **Find it:** [npm](https://www.npmjs.com/package/opencode-herdr) · search `opencode herdr` · GitHub topics `opencode` `herdr`
 
@@ -32,7 +32,7 @@ Add the package to `plugins` in `~/.config/opencode/opencode.json`:
 The Herdr marketplace companion requires Herdr 0.9.3 or newer, Bun, and OpenCode V2 beta `opencode2` beta-17823 on `PATH`. After the repository is indexed by Herdr, select **Install OpenCode integration** in the global context. It runs:
 
 ```sh
-opencode2 plugin add opencode-herdr@0.2.0
+opencode2 plugin add opencode-herdr@0.2.1
 ```
 
 This installs the pinned npm version in OpenCode's global configuration. Repeating the install is safe; an isolated beta-17823 check confirmed the existing JSONC configuration, comments, and bytes remain unchanged on repeat. Restart OpenCode if the integration does not appear. The installer check covers installation and configuration only, not marketplace UI visibility or interactive OpenCode UI behavior.
@@ -57,6 +57,7 @@ Marketplace discovery requires this manifest on a public repository's default br
 | `/herdr-delete` | Close all `oh-*` job panes in the `opencode-herdr` tab |
 | `/herdr-pane <runtime> <task>` | Delegate a task (shows usage if runtime/task is missing) |
 | `/herdr-handover <runtime> [note]` | Split pane, wait idle, send one-line context |
+| `/herdr-model` | Configure global agent providers, models and reasoning variants (also `/herdr-routing` or **Alt+H**) |
 
 CLI (no LLM):
 
@@ -69,6 +70,14 @@ Mechanical command results are sent as no-reply synthetic session messages with 
 ## Model refs
 
 Configure an agent with e.g. `herdr/cursor/composer-2.5` → provider `herdr`, runtime **cursor**, model **composer-2.5**.
+
+### Model configuration menu
+
+Open `/herdr-model`, `/herdr-routing`, or **Alt+H** and choose an agent, provider, model, and optional reasoning variant. The existing TUI companion includes this menu automatically. It lists enabled, tool-capable models from the current location, including Herdr and other providers. Search uses the native selector; newer V2 clients also support space/hyphen/underscore-agnostic matching.
+
+Selections update the local global `opencode.json`, preserving unrelated agent settings and configuration. Herdr selections also update the existing schema-1 `herdr-routing.json`; selecting another provider removes only that agent's obsolete Herdr routing. **Clear Herdr assignment** restores model inheritance, and **Show Herdr-assigned agents** filters the agent list. Canceling never saves. Failed routing writes roll the configuration back.
+
+This menu edits JSON configuration only; it does not rewrite JSONC. The previous JSON is backed up as `opencode.json.herdr-menu.bak`. It does not install a provider, modify Gentle AI, or change runtime dependencies. Remove a separately installed legacy `herdr-manage` TUI entry after upgrading to avoid duplicate menu shortcuts.
 
 ## Dev / debug
 

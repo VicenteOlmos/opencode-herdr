@@ -1,6 +1,6 @@
 import { stat } from "node:fs/promises"
 import { isAbsolute, join } from "node:path"
-import { Plugin } from "@opencode-ai/plugin/tui"
+import type { Plugin } from "@opencode-ai/plugin/tui"
 import { refreshSnapshot, type Snapshot } from "./capabilities.js"
 import { HerdrController } from "./controller.js"
 import { HandoverAbort, HerdrError } from "./errors.js"

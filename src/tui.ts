@@ -1,11 +1,13 @@
-import { Plugin } from "@opencode-ai/plugin/tui"
+import type { Plugin } from "@opencode-ai/plugin/tui"
 import { formatFeedbackToast, HERDR_FEEDBACK_SOURCE } from "./feedback.js"
 import { registerHerdrCommands } from "./tui-commands.js"
+import { registerModelMenu } from "./tui-menu.js"
 
-export const HerdrTuiPlugin = Plugin.define({
+export const HerdrTuiPlugin: Parameters<typeof Plugin.define>[0] = {
   id: "opencode-herdr.tui",
   async setup(context) {
     const cleanupCommands = await registerHerdrCommands(context)
+    const cleanupMenu = registerModelMenu(context)
     const cleanupFeedback = context.data.on("session.inbox.enqueued", (event) => {
       const { item, sessionID } = event.data
       const activeRoute = context.ui.router.current()
@@ -24,8 +26,9 @@ export const HerdrTuiPlugin = Plugin.define({
     return () => {
       cleanupFeedback()
       cleanupCommands()
+      cleanupMenu()
     }
   },
-})
+}
 
 export default HerdrTuiPlugin

@@ -15,7 +15,7 @@ test("Herdr marketplace manifest installs the pinned OpenCode integration global
   expect(manifest).toMatchObject({
     id: "opencode-herdr",
     name: "OpenCode Herdr",
-    version: "0.1.0",
+    version: "0.1.1",
     min_herdr_version: "0.9.3",
     platforms: ["linux", "macos"],
   })
@@ -26,7 +26,7 @@ test("Herdr marketplace manifest installs the pinned OpenCode integration global
       id: "install-opencode",
       title: "Install OpenCode integration",
       contexts: ["global"],
-      command: ["opencode2", "plugin", "add", "opencode-herdr@0.2.0"],
+      command: ["opencode2", "plugin", "add", "opencode-herdr@0.2.1"],
     },
   ])
 })

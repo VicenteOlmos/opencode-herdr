@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from "node:fs"
-import { join } from "node:path"
+import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs"
+import { dirname, join } from "node:path"
 import { homedir } from "node:os"
 
 export const ROUTING_SCHEMA = 1 as const
@@ -75,6 +75,31 @@ export function readRouting(path = defaultRoutingPath()): HerdrRouting {
     return { schemaVersion: ROUTING_SCHEMA, assignments }
   } catch {
     return emptyRouting()
+  }
+}
+
+/** Preserve the schema and normalization shared with runtime routing reads. */
+export function setAssignment(routing: HerdrRouting, agent: string, value: HerdrAssignment | null): HerdrRouting {
+  const assignments = { ...routing.assignments }
+  const assignment = normalizeAssignment(value)
+  if (assignment) assignments[agent] = assignment
+  else delete assignments[agent]
+  return { schemaVersion: ROUTING_SCHEMA, assignments }
+}
+
+export function writeRouting(routing: HerdrRouting, path = defaultRoutingPath()): void {
+  const assignments: Record<string, HerdrAssignment> = {}
+  for (const [agent, value] of Object.entries(routing.assignments).sort(([a], [b]) => a.localeCompare(b))) {
+    const assignment = normalizeAssignment(value)
+    if (assignment) assignments[agent] = assignment
+  }
+  mkdirSync(dirname(path), { recursive: true })
+  const temporary = `${path}.${crypto.randomUUID()}.tmp`
+  try {
+    writeFileSync(temporary, `${JSON.stringify({ schemaVersion: ROUTING_SCHEMA, assignments }, null, 2)}\n`, { mode: 0o600 })
+    renameSync(temporary, path)
+  } finally {
+    if (existsSync(temporary)) unlinkSync(temporary)
   }
 }
 

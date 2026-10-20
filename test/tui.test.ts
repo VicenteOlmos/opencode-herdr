@@ -58,6 +58,17 @@ describe("OpenCode V2 TUI companion", () => {
     expect(slotDisposed()).toBeTrue()
   })
 
+  test("also registers the model menu without changing mechanical commands", async () => {
+    const { context, layers } = createNativeTuiContext()
+    const cleanup = await HerdrTuiPlugin.setup(context as any)
+    const commands = layers.flatMap(layer => layer().commands ?? []) as any[]
+    const menu = commands.find(command => command.slash?.name === "herdr-model")
+    expect(menu).toBeDefined()
+    expect(menu.slash.aliases).toContain("herdr-routing")
+    expect(menu.bind).toBe("alt+h")
+    await cleanup?.()
+  })
+
   test("binds pane execution to the selected session directory before refresh awaits", async () => {
     const root = await mkdtemp(join(tmpdir(), "herdr-tui-location-"))
     const directoryA = join(root, "workspace-a")
