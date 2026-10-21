@@ -1,4 +1,6 @@
 import type { LanguageModelV3CallOptions } from "@ai-sdk/provider"
+import { writeFile } from "node:fs/promises"
+import { join } from "node:path"
 import type { Target } from "./adapters/types.js"
 import { effortFromCallOptions } from "./effort.js"
 import { HerdrAgent, paneAgentIdentity, type PaneAgentIdentity, type Run } from "./herdr.js"
@@ -6,6 +8,7 @@ import { createJob, readResult, removeJob, type Job, type JobResultV1 } from "./
 import { taskFromPrompt } from "./messages.js"
 import { HerdrPool } from "./pool.js"
 import { AbortError, HerdrError } from "./errors.js"
+import { executionFor, nativeResult, type RunnerBackend } from "./execution.js"
 
 export type TerminalOutcome = "done" | "error" | "cancelled"
 
@@ -24,6 +27,8 @@ export type ControllerOptions = {
   keepPanes?: boolean
   /** Keep /tmp/.opencode-herdr-* dirs after the job finishes (plugin keepJobs / debug). */
   keepJobs?: boolean
+  /** Internal executor; OpenCode integration remains required for either backend. */
+  runner?: RunnerBackend
 }
 
 /** First terminal write wins; used by controller execute and tests. */
@@ -45,7 +50,8 @@ export class HerdrController {
     if (!this.options.cwd || !this.options.workspace) throw new HerdrError("Herdr runtime context is unavailable")
     if (options.abortSignal?.aborted) throw new AbortError()
     const effort = effortFromCallOptions(options)
-    const job = await createJob(taskFromPrompt(options.prompt), this.options.root ?? "/tmp", { effort })
+    const task = taskFromPrompt(options.prompt)
+    const job = await createJob(task, this.options.root ?? "/tmp", { effort })
     const closePane = !this.options.keepPanes
     let owned: { terminalId: string; paneId: string; jobId?: string; name?: string } | undefined
     const terminal = { value: undefined as TerminalOutcome | undefined }
@@ -86,19 +92,13 @@ export class HerdrController {
     }
     options.abortSignal?.addEventListener("abort", onAbort, { once: true })
     try {
-      const runner = [
-        Bun.which("bun") ?? "bun",
-        new URL("./runner.ts", import.meta.url).pathname,
-        job.dir,
-        target.id,
-        target.adapter,
-        target.nativeModel,
-      ]
+      const runner = executionFor(job, target, task, effort, this.options.runner)
+      if (runner.script) await writeFile(join(job.dir, "command.sh"), runner.script, { mode: 0o600, flag: "wx" })
       owned = await this.agent.startJob({
         jobId: job.id,
         cwd: this.options.cwd,
         workspace: this.options.workspace,
-        argv: runner,
+        argv: runner.argv,
         env: { OPENCODE_HERDR_JOB: job.dir },
         pool: this.pool,
         closePane,
@@ -109,7 +109,8 @@ export class HerdrController {
         latchTerminal(terminal, "cancelled")
         throw new AbortError()
       }
-      const result = await this.waitForResult(job, target, options.abortSignal)
+      const result = await this.waitForResult(job, target, options.abortSignal, runner.native)
+      if (options.abortSignal?.aborted) throw new AbortError()
       if (result.status === "done") latchTerminal(terminal, "done")
       else if (result.status === "cancelled") latchTerminal(terminal, "cancelled")
       else latchTerminal(terminal, "error")
@@ -131,7 +132,7 @@ export class HerdrController {
     }
   }
 
-  private async waitForResult(job: Job, target: Target, abortSignal?: AbortSignal): Promise<JobResultV1> {
+  private async waitForResult(job: Job, target: Target, abortSignal?: AbortSignal, native = false): Promise<JobResultV1> {
     const timeoutMs = this.options.resultTimeoutMs ?? 600_000
     const deadline = Date.now() + timeoutMs
     while (Date.now() < deadline) {
@@ -139,7 +140,7 @@ export class HerdrController {
       try {
         const result = this.options.result
           ? await this.options.result(job, target)
-          : await readResult(job, target.id)
+          : native ? await nativeResult(job, target, abortSignal, deadline) : await readResult(job, target.id)
         if (result.targetId !== target.id) throw new HerdrError("result target mismatch")
         return result
       } catch (error) {
