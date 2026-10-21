@@ -1,6 +1,6 @@
 # opencode-herdr
 
-> **OpenCode V2 compatibility — `0.2.0`:** This version targets the OpenCode V2 beta contract and requires the matching `@opencode-ai/cli@0.0.0-beta-17823` runtime (`opencode2`). Native server loading, provider/model catalog registration, concurrent fake-adapter generation, native TUI setup/callbacks/feedback/cleanup, and clean tarball installation (including the npm launcher and automatic companion discovery) are verified against that beta. Compatibility is scoped to this runtime. Physical keyboard input, real provider generation, and the default runtime package downloader remain unverified.
+> **OpenCode V2 compatibility — `0.2.2`:** This version targets the OpenCode V2 beta contract and requires the matching `@opencode-ai/cli@0.0.0-beta-17823` runtime (`opencode2`). Native server loading, provider/model catalog registration, concurrent fake-adapter generation, native TUI setup/callbacks/feedback/cleanup, and clean tarball installation (including the npm launcher and automatic companion discovery) are verified against that beta. Compatibility is scoped to this runtime. Physical keyboard input, real provider generation, and the default runtime package downloader remain unverified.
 
 [![npm](https://img.shields.io/npm/v/opencode-herdr.svg)](https://www.npmjs.com/package/opencode-herdr)
 [![license](https://img.shields.io/npm/l/opencode-herdr.svg)](./LICENSE)
@@ -9,7 +9,7 @@
 OpenCode plugin: route selected agents through [Herdr](https://herdr.dev) as `herdr/<adapter>/<nativeModel>` (runtime + model from the id).
 
 Requires Herdr and at least one runtime CLI on `PATH` (`agent`, `claude`, `codex`, or `opencode`).
-Version `0.2.0` uses the beta `@opencode-ai/plugin` contract and requires the matching `@opencode-ai/cli@0.0.0-beta-17823` runtime (`opencode2`). It does not target the stable `@opencode/plugin` package. Versions earlier than `0.2.0` do not contain this V2 migration.
+Version `0.2.2` uses the beta `@opencode-ai/plugin` contract and requires the matching `@opencode-ai/cli@0.0.0-beta-17823` runtime (`opencode2`). It does not target the stable `@opencode/plugin` package. Versions earlier than `0.2.0` do not contain this V2 migration.
 
 **Find it:** [npm](https://www.npmjs.com/package/opencode-herdr) · search `opencode herdr` · GitHub topics `opencode` `herdr`
 
@@ -32,7 +32,7 @@ Add the package to `plugins` in `~/.config/opencode/opencode.json`:
 The Herdr marketplace companion requires Herdr 0.9.3 or newer, Bun, and OpenCode V2 beta `opencode2` beta-17823 on `PATH`. After the repository is indexed by Herdr, select **Install OpenCode integration** in the global context. It runs:
 
 ```sh
-opencode2 plugin add opencode-herdr@0.2.0
+opencode2 plugin add opencode-herdr@0.2.2
 ```
 
 This installs the pinned npm version in OpenCode's global configuration. Repeating the install is safe; an isolated beta-17823 check confirmed the existing JSONC configuration, comments, and bytes remain unchanged on repeat. Restart OpenCode if the integration does not appear. The installer check covers installation and configuration only, not marketplace UI visibility or interactive OpenCode UI behavior.
