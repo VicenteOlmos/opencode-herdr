@@ -3,6 +3,9 @@ import { adapterFor } from "./adapters/types.js"
 import { adapterArgv, normalizeEffort } from "./effort.js"
 import { type Job, writeResult } from "./job.js"
 import { HerdrError } from "./errors.js"
+import { AdapterOutput, DiagnosticTail, OutputLines } from "./adapter-output.js"
+
+export { finalAssistantText } from "./adapter-output.js"
 
 type Event = Record<string, unknown>
 const object = (value: unknown): Event | undefined => value && typeof value === "object" && !Array.isArray(value) ? value as Event : undefined
@@ -76,48 +79,19 @@ export function describeAdapterEvent(adapter: string, event: Event): string | un
   return type ? `event ${type}` : undefined
 }
 
-export function finalAssistantText(adapter: string, output: string) {
-  const events = output.trim().split("\n").map((line) => { try { return object(JSON.parse(line)) } catch { return undefined } })
-  if (!events.length || events.some((event) => !event)) throw new HerdrError("invalid adapter output")
-  const messages = events.flatMap((event) => {
-    if (adapter === "cursor" || adapter === "claude") {
-      const content = object(event)?.message && object(object(event)?.message)?.content
-      return Array.isArray(content) ? content.map(object).map((part) => text(part?.text)).filter((part): part is string => !!part) : [text(event?.result)].filter((part): part is string => !!part)
-    }
-    if (adapter === "opencode") return object(event)?.type === "text" ? [text(object(object(event)?.part)?.text) ?? text(event?.text)].filter((part): part is string => !!part) : []
-    const item = object(event)?.item
-    return object(event)?.type === "item.completed" && object(item)?.type === "agent_message" ? [text(object(item)?.text)].filter((part): part is string => !!part) : []
-  })
-  const result = adapter === "cursor" || adapter === "claude" ? messages.at(-1) : messages.join("")
-  if (!result) throw new HerdrError("invalid adapter output")
-  return result
-}
-
 async function readStream(
   stream: ReadableStream<Uint8Array> | null,
-  onChunkLine?: (line: string) => void,
-): Promise<string> {
-  if (!stream) return ""
+  onChunk: (chunk: string) => void,
+): Promise<void> {
+  if (!stream) return
   const reader = stream.getReader()
   const decoder = new TextDecoder()
-  let buf = ""
-  let out = ""
   for (;;) {
     const { done, value } = await reader.read()
     if (done) break
-    const chunk = decoder.decode(value, { stream: true })
-    out += chunk
-    if (!onChunkLine) continue
-    buf += chunk
-    for (;;) {
-      const nl = buf.indexOf("\n")
-      if (nl < 0) break
-      onChunkLine(buf.slice(0, nl))
-      buf = buf.slice(nl + 1)
-    }
+    onChunk(decoder.decode(value, { stream: true }))
   }
-  if (onChunkLine && buf.length) onChunkLine(buf)
-  return out
+  onChunk(decoder.decode())
 }
 
 export async function runJob(job: Job, targetId: string, adapterId: string, nativeModel: string) {
@@ -134,27 +108,22 @@ export async function runJob(job: Job, targetId: string, adapterId: string, nati
     status(`waiting… ${sec}s (agent still running; OpenCode parent is blocked on result.json)`)
   }, 15_000)
 
-  let stdout = ""
-  let stderr = ""
+  const output = new AdapterOutput(adapterId, (event) => {
+    const note = describeAdapterEvent(adapterId, event)
+    if (note) status(note)
+  }, (line) => status(`out: ${clip(line, 100)}`))
+  const diagnostic = new DiagnosticTail()
+  const progress = new OutputLines((line) => {
+    const trimmed = line.trim()
+    if (trimmed) status(`err: ${clip(trimmed, 160)}`)
+  }, 16_384)
   try {
-    const outP = readStream(child.stdout, (line) => {
-      const trimmed = line.trim()
-      if (!trimmed) return
-      try {
-        const event = object(JSON.parse(trimmed))
-        if (!event) return
-        const note = describeAdapterEvent(adapterId, event)
-        if (note) status(note)
-      } catch {
-        // non-JSON progress lines (rare) — show clipped
-        status(`out: ${clip(trimmed, 100)}`)
-      }
-    })
-    const errP = readStream(child.stderr, (line) => {
-      const trimmed = line.trim()
-      if (trimmed) status(`err: ${clip(trimmed, 160)}`)
-    })
-    ;[stdout, stderr] = await Promise.all([outP, errP])
+    await Promise.all([
+      readStream(child.stdout, (chunk) => output.push(chunk)),
+      readStream(child.stderr, (chunk) => { diagnostic.push(chunk); progress.push(chunk) }),
+    ])
+    progress.finish()
+    output.flush()
   } finally {
     clearInterval(heartbeat)
   }
@@ -163,15 +132,15 @@ export async function runJob(job: Job, targetId: string, adapterId: string, nati
   const elapsed = Math.round((Date.now() - started) / 1000)
   if (code !== 0) {
     status(`exit ${code} after ${elapsed}s — writing error result`)
-    return writeResult(job, { schemaVersion: 1, jobId: job.id, targetId, status: "error", diagnostic: stderr || `exit ${code}`, delegatedTools: adapter.toolCall })
+    return writeResult(job, { schemaVersion: 1, jobId: job.id, targetId, status: "error", diagnostic: diagnostic.text || `exit ${code}`, delegatedTools: adapter.toolCall })
   }
   try {
-    const textOut = finalAssistantText(adapterId, stdout)
+    const textOut = output.finish()
     status(`done ${elapsed}s — result ${textOut.length} chars → result.json`)
     await writeResult(job, { schemaVersion: 1, jobId: job.id, targetId, status: "done", text: textOut, delegatedTools: adapter.toolCall })
-  } catch {
+  } catch (error) {
     status(`done ${elapsed}s — invalid adapter output`)
-    await writeResult(job, { schemaVersion: 1, jobId: job.id, targetId, status: "error", diagnostic: "invalid adapter output", delegatedTools: adapter.toolCall })
+    await writeResult(job, { schemaVersion: 1, jobId: job.id, targetId, status: "error", diagnostic: error instanceof Error ? error.message : "invalid adapter output", delegatedTools: adapter.toolCall })
   }
 }
 
