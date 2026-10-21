@@ -83,6 +83,15 @@ Close leftovers with `/herdr-delete`.
 bun install && bun test
 ```
 
+## Execution memory
+
+OpenCode integration stays required. On POSIX, jobs use a lightweight internal
+shell executor instead of starting a Bun runner per task. Output is captured in
+private temporary files and parsed incrementally by the existing OpenCode host.
+Set `OPENCODE_HERDR_RUNNER=bun` for compatibility and per-event pane progress.
+`keepJobs` also retains raw captures; do not share them unredacted.
+See [execution memory](docs/execution-memory.md) for limits and tradeoffs.
+
 ## License
 
 MIT

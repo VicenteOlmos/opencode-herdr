@@ -1,0 +1,41 @@
+#!/bin/sh
+# Internal capture engine. OpenCode owns adapter argv, parsing, and result validation.
+if [ "$#" -eq 1 ] && [ "$1" = --help ]; then
+  printf '%s\n' 'Usage: opencode-herdr-engine JOB_DIRECTORY -- COMMAND [ARG...]' \
+    'Internal opencode-herdr executor; requires an existing private job directory.' \
+    'Captures stdout/stderr privately and publishes exit.status atomically.' \
+    'Interrupt through the Herdr foreground process group, not an individual PID.'
+  exit 0
+fi
+if [ "$#" -lt 3 ] || [ "$2" != -- ] || [ ! -d "$1" ] || [ -L "$1" ]; then
+  printf '%s\n' 'opencode-herdr-engine: expected JOB_DIRECTORY -- COMMAND [ARG...]' >&2
+  exit 2
+fi
+job=$1
+shift 2
+umask 077
+set -C
+for name in stdout.jsonl stderr.log exit.status exit.status.tmp; do
+  if [ -e "$job/$name" ] || [ -L "$job/$name" ]; then
+    printf '%s\n' 'opencode-herdr-engine: capture already exists' >&2
+    exit 1
+  fi
+done
+exec 3>"$job/stdout.jsonl" 4>"$job/stderr.log" 5>"$job/exit.status.tmp"
+publish() {
+  code=$?
+  trap - 0 INT TERM
+  printf '%s\n' "$code" >&5
+  exec 3>&- 4>&- 5>&-
+  # A hard link publishes complete bytes without overwriting an existing marker.
+  ln "$job/exit.status.tmp" "$job/exit.status" || exit 1
+  rm "$job/exit.status.tmp"
+  printf '[herdr] native execution finished (exit %s)\n' "$code" >&2
+  exit "$code"
+}
+trap publish 0
+trap 'exit 130' INT
+trap 'exit 143' TERM
+printf '%s\n' '[herdr] native execution started' >&2
+"$@" >&3 2>&4 3>&- 4>&- 5>&-
+exit "$?"
