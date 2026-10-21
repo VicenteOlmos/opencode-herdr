@@ -15,27 +15,60 @@ job=$1
 shift 2
 umask 077
 set -C
-for name in stdout.jsonl stderr.log exit.status exit.status.tmp; do
+for name in stdout.jsonl stderr.log exit.status exit.status.tmp stdout.pipe stderr.pipe; do
   if [ -e "$job/$name" ] || [ -L "$job/$name" ]; then
     printf '%s\n' 'opencode-herdr-engine: capture already exists' >&2
     exit 1
   fi
 done
-exec 3>"$job/stdout.jsonl" 4>"$job/stderr.log" 5>"$job/exit.status.tmp"
+if ! command -v mkfifo >/dev/null 2>&1 || ! command -v cat >/dev/null 2>&1; then
+  printf '%s\n' 'opencode-herdr-engine: requires mkfifo and cat' >&2
+  exit 1
+fi
+mkfifo "$job/stdout.pipe" "$job/stderr.pipe" || exit 1
+stdout_relay=
+stderr_relay=
+published=0
+interrupted=0
+code=1
 publish() {
-  code=$?
+  status=$?
   trap - 0 INT TERM
-  printf '%s\n' "$code" >&5
-  exec 3>&- 4>&- 5>&-
-  # A hard link publishes complete bytes without overwriting an existing marker.
-  ln "$job/exit.status.tmp" "$job/exit.status" || exit 1
-  rm "$job/exit.status.tmp"
-  printf '[herdr] native execution finished (exit %s)\n' "$code" >&2
-  exit "$code"
+  for relay in "$stdout_relay" "$stderr_relay"; do
+    if [ -n "$relay" ]; then kill "$relay" 2>/dev/null || :; wait "$relay" 2>/dev/null || :; fi
+  done
+  rm -f "$job/stdout.pipe" "$job/stderr.pipe"
+  if [ "$interrupted" -ne 0 ]; then
+    code=$interrupted
+    published=1
+    for name in stdout.jsonl stderr.log; do
+      if [ ! -e "$job/$name" ] && [ ! -L "$job/$name" ]; then
+        (set -C; : >"$job/$name") || exit 1
+      fi
+    done
+  fi
+  if [ "$published" -eq 1 ]; then
+    if ! (set -C; printf '%s\n' "$code" >"$job/exit.status.tmp"); then exit 1; fi
+    # A hard link publishes complete bytes without overwriting an existing marker.
+    if ! ln "$job/exit.status.tmp" "$job/exit.status"; then rm -f "$job/exit.status.tmp"; exit 1; fi
+    rm "$job/exit.status.tmp" || exit 1
+  fi
+  printf '[herdr] native execution finished (exit %s)\n' "$status" >&2
+  exit "$status"
 }
 trap publish 0
-trap 'exit 130' INT
-trap 'exit 143' TERM
+trap 'interrupted=130; exit 130' INT
+trap 'interrupted=143; exit 143' TERM
 printf '%s\n' '[herdr] native execution started' >&2
-"$@" >&3 2>&4 3>&- 4>&- 5>&-
-exit "$?"
+cat "$job/stdout.pipe" >"$job/stdout.jsonl" &
+stdout_relay=$!
+cat "$job/stderr.pipe" >"$job/stderr.log" &
+stderr_relay=$!
+"$@" >"$job/stdout.pipe" 2>"$job/stderr.pipe"
+code=$?
+wait "$stdout_relay" || { [ "$code" -ne 0 ] || code=1; }
+stdout_relay=
+wait "$stderr_relay" || { [ "$code" -ne 0 ] || code=1; }
+stderr_relay=
+published=1
+exit "$code"

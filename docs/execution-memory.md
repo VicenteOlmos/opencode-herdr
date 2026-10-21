@@ -28,15 +28,22 @@ the same sanitized, validated `JobResultV1`. This is an internal component, not 
 replacement standalone application or an optional OpenCode integration.
 
 The engine needs no compiler, Node, Python, jq, installer, or resident daemon.
-It uses the system shell and standard `ln`/`rm` utilities. The OpenCode plugin
+It uses the system shell and standard `cat`, `ln`, `mkfifo`, and `rm` utilities. The OpenCode plugin
 still uses Bun; so can the selected target CLI. Windows and systems without a
 POSIX shell retain the Bun executor. Set `OPENCODE_HERDR_RUNNER=bun` in OpenCode's
 environment to select the compatibility executor explicitly; `native` requires
 a POSIX shell. Unknown explicit selections are rejected rather than ignored.
 
-The tradeoff is temporary disk use: native execution stores raw stdout/stderr in
-the existing private job directory (mode 0700, capture files mode 0600), then
-publishes a complete exit marker. Transcripts are not buffered in shell memory.
+The tradeoff is temporary disk use: native execution relays stdout/stderr through
+private FIFOs into regular capture files in the existing private job directory
+(mode 0700; FIFOs and capture files mode 0600). It publishes the direct CLI's
+exit status only after both relays observe EOF, so inherited writers cannot make
+OpenCode read a partial capture. Existing capture paths, including FIFOs and
+symlinks, are rejected before capture mutation. Transcripts are not buffered in
+shell memory; two small `cat` relay processes and FIFO/kernel buffers add bounded
+process and pipe overhead, while raw output size consumes temporary disk.
+The CLI itself stays a foreground command so terminal interrupt behavior and
+the inherited foreground process-group contract remain intact.
 Multiline prompts are passed through a mode-0600 command file whose argv values
 are individually single-quoted; they never become terminal input or interpolated
 shell expressions. The command file is removed with the rest of the job.
@@ -47,7 +54,12 @@ also retains these raw transcripts, which can contain sensitive CLI output;
 do not share them unredacted. Disk consumption scales with CLI output.
 
 Cancellation uses Herdr's existing Ctrl+C and owned-pane cleanup. Interrupt the
-foreground process group, not just the internal shell PID. Result parsing also
-checks OpenCode's cancellation signal and result deadline between chunks.
+foreground process group, not just the internal shell PID; the engine cleans up
+its relay children and FIFOs when interrupted while draining. Manual SIGINT and
+SIGTERM publish private exit markers (130 and 143 respectively), so the existing
+native result parser can report the interrupted command without waiting for its
+deadline. OpenCode's AbortSignal remains authoritative for request cancellation.
+Result parsing also checks the cancellation signal and result deadline between
+chunks.
 The engine's `--help` documents its internal argv; prompts are never evaluated
 as shell code. Model and effort arguments still come from `adapterArgv`.
