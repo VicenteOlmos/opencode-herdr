@@ -1,6 +1,6 @@
 # Native execution engine with mandatory OpenCode integration
-Objective: reduce per-job runtime and output-buffer overhead while retaining opencode-herdr as the OpenCode plugin. Baseline: `84db6dc` plus preserved pre-existing worktree edits; feature branch `feat/native-herdr-engine`.
-Delivery: `ask-on-risk`, `feature-branch-chain` selected; estimated 600–800 authored changed lines, no remote publication authorized. Checks: `bun test`, local shell-engine subprocess tests, `bunx tsc --noEmit`, isolated synthetic memory comparison.
+Objective: reduce per-job runtime and output-buffer overhead while retaining opencode-herdr as the OpenCode plugin. Original baseline: `84db6dc` plus preserved worktree edits; clean PR base: `261ed99` (`main`), branch `feat/native-herdr-engine-pr`.
+Delivery: user-authorized `single-pr`, replacing the earlier chain with an explicit size exception; scoped Git HTTPS push and GitHub CLI PR creation authorized for VicenteOlmos/opencode-herdr. Checks: `bun test`, typecheck, shell syntax, fake-runtime smoke, controlled memory evidence; no merge or release.
 
 ## Specs
 
@@ -9,7 +9,7 @@ Delivery: `ask-on-risk`, `feature-branch-chain` selected; estimated 600–800 au
 > me gusta la recomendacion
 > vamos con eso
 
-Implement the previously recommended execution-engine separation and bounded output processing, subject to S2. Preserve the existing CLI adapter arguments, model/effort selection, provider result schema, commands, and job cleanup. An independent engine means an internal execution component without an extra Bun/OpenCode SDK runtime, not a replacement application. All implementation stays local; no installs, provider calls, active-session control, release, push, or PR creation are authorized by this document.
+Implement the previously recommended execution-engine separation and bounded output processing, subject to S2. Preserve the existing CLI adapter arguments, model/effort selection, provider result schema, commands, and job cleanup. An independent engine means an internal execution component without an extra Bun/OpenCode SDK runtime, not a replacement application. Initial implementation authorization excluded remote actions; S4 records the later scoped publication authorization. Real provider calls, active-session control, merge and release remain out of scope.
 
 ### S2 — Keep the OpenCode adapter mandatory
 
@@ -31,11 +31,20 @@ The completed investigation found full stdout/stderr retention and a Bun runner 
 
 User reopened reliable memory measurement after the earlier deferral. Run a fresh bounded, controlled comparison of the original runner, optimized Bun backend, and native backend with identical synthetic CLI output and mandatory provider consumption. Report process-tree PSS, workload, repetitions, result equivalence and limitations; do not extrapolate measured executor savings to total OpenCode memory. No real provider or active Herdr session is authorized by this measurement request.
 
+### S4 — Prepare the clean, authorized pull request
+
+> dale pr
+
+> PR limpio único
+
+Use a fresh branch from current `main` containing only the three memory feature commits, preserving the original branch and all pending user changes. The user explicitly replaced the earlier chain with one over-budget PR and selected this repository's current template and rules without requiring an approved issue or new labels. Authorized destination: `github.com/VicenteOlmos/opencode-herdr`; push `feat/native-herdr-engine-pr` using configured Git HTTPS authentication and create its PR using the authorized existing GitHub CLI session. Check compatibility on the clean base; do not include the two earlier V2 migration commits, merge, release, force-push, or change credential settings.
+
 ## Tasks
 
 - T1 [S1,S3] inline — verified: shared incremental adapter-output processing, bounded diagnostics, existing Bun-runner compatibility, regression tests and documentation; commit `34c8ec3`. Route reason: one dependent behavior, no writer trigger. Risk: item 3 (shared parser used by all existing adapters).
 - T2 [S1,S2,S3] inline — verified: lightweight internal engine integrated into the existing controller, same argv helper/result writer, mandatory provider integration, native execution and cancellation/cleanup tests; commit `ed42d7e`. Route reason: depends on T1's parser and contract, not independent parallel work. Risk: items 2,3,4 (private capture files, shared execution contract, cancellation/lifecycle ordering).
 - T3 [S1,S2,S3] inline + bounded measurement worker — verified: functional checks, suite/typecheck, named-risk verifier and package contents passed; nine valid controlled process-tree memory runs recorded in `odd/evidence/native-herdr-engine-memory.json`; source commits `34c8ec3`, `ed42d7e`. Route reason: a per-action worker prepared the synthetic benchmark; parent corrected the isolated PATH and ran the bounded batch. Existing shipping source remains unchanged.
+- T4 [S4] inline — compatibility verified: isolated clean-base cherry-picks `0744f15`, `727b11a`, `1e9e613`; 171 tests, typecheck, shell syntax and fake-runtime smoke passed; scoped push, PR creation and target-host readback pending. Route reason: understood Git/metadata work and one passive README conflict; no writer trigger. Previously verified executable source is unchanged; do not duplicate independent code verification for a documentation-only conflict resolution.
 
 ## Log
 
@@ -137,3 +146,21 @@ quiero que midas el ahorro
 
 - Read back the evidence JSON against all nine raw cases: rounded peaks/means, argv, workload bytes, exit statuses and raw-results digest matched. All four remaining owned benchmark/baseline scratch roots were then removed. Durable numeric proof and limitations remain in `odd/evidence/native-herdr-engine-memory.json`.
 - T1–T3 are verified. No additional source change or functional test-suite rerun was needed for the measurement-only closure. Existing user work remains outside the local feature commits.
+
+### L15 — PR authorization and clean-base preparation
+
+dale pr
+
+PR limpio único
+
+- User authorized the existing GitHub CLI session for this repository, then explicitly authorized a clean single PR, the new branch's Git HTTPS push and GitHub CLI creation. This supersedes the earlier chain choice and waives the global issue-first/new-label workflow for this PR in favor of the actual repository policy. The scope includes neither merge nor release.
+- Target-host inspection found `main` diverged from the original feature branch, which would include two previous V2 migration commits. Prepared a separate home-directory worktree and cherry-picked only the three memory commits onto `261ed99`; original branch and dirty worktree remain intact.
+- Resolved one README-only conflict by keeping both the current main beta-smoke paragraph and the new execution-memory section. No executable source change was required.
+- Current main ruleset requires signed commits, linear history, resolved review threads and CI context `test`. The actual PR template is Summary, Checklist and Test plan; no issue forms or type-label catalog exist. User explicitly accepted one larger PR without creating new issue/label infrastructure.
+- New branch dependency declarations and `bun.lock` exactly match the already-installed original workspace. Reuse those dependency files read-only rather than downloading or changing packages. Signature headers are present on all three cherry-picked commits; GitHub verification still requires target-host readback after push.
+
+### L16 — Clean-base compatibility checks
+
+- Resumed interrupted PR preparation without repeating the completed cherry-picks. Linked the matching installed dependencies read-only in the isolated worktree; no install or dependency change was required.
+- `bun test`: 171 passed, zero failed, 23 files. `bun run typecheck`, `bun run scripts/smoke.ts` and `/bin/sh -n bin/opencode-herdr-engine`: exit 0 each. The smoke uses fake runtime CLIs and does not call a model provider.
+- These results supersede the earlier 150-test worktree count for current PR compatibility, not the historical nine-run memory experiment. The benchmark's recorded source identifiers remain its original measured revisions.
