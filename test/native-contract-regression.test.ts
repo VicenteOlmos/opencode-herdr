@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { chmod, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { createJob } from "../src/job"
 import { nativeResult } from "../src/execution"
@@ -10,7 +11,7 @@ const nativeTest = process.platform === "win32" ? test.skip : test
 const target = (adapter: string): Target => ({ id: `${adapter}/m`, adapter, nativeModel: "m", name: "m", provenance: "verified", limits: { context: 1, output: 1 }, toolCall: true })
 
 async function captures(code: number, stdout = "", stderr = "") {
-  const root = await mkdtemp(join(process.env.TMPDIR ?? "/tmp/opencode", "native-contract-"))
+  const root = await mkdtemp(join(tmpdir(), "native-contract-"))
   const job = await createJob("task", root)
   for (const [name, value] of Object.entries({ "exit.status": `${code}\n`, "stdout.jsonl": stdout, "stderr.log": stderr })) {
     await writeFile(join(job.dir, name), value, { mode: 0o600 })

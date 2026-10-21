@@ -39,12 +39,19 @@ User reopened reliable memory measurement after the earlier deferral. Run a fres
 
 Use a fresh branch from current `main` containing only the three memory feature commits, preserving the original branch and all pending user changes. The user explicitly replaced the earlier chain with one over-budget PR and selected this repository's current template and rules without requiring an approved issue or new labels. Authorized destination: `github.com/VicenteOlmos/opencode-herdr`; push `feat/native-herdr-engine-pr` using configured Git HTTPS authentication and create its PR using the authorized existing GitHub CLI session. Check compatibility on the clean base; do not include the two earlier V2 migration commits, merge, release, force-push, or change credential settings.
 
+### S5 — Fix the confirmed inherited-writer regression
+
+> dale con ese fix entonces
+
+Fix Pullfrog's confirmed PR #34 finding: native completion must wait for EOF from inherited stdout and stderr writers, not merely the direct CLI exit. Preserve the CLI's actual exit code, cancellation/deadline behavior, private capture permissions and bounded-memory streaming; do not add a fixed sleep or another JS runtime. Add delayed-writer native/Bun parity coverage and include the correction in the same authorized PR. Keep the already prepared CI fixture portability correction. Do not merge, release, resolve review threads or trigger Pullfrog's automated fix actions.
+
 ## Tasks
 
 - T1 [S1,S3] inline — verified: shared incremental adapter-output processing, bounded diagnostics, existing Bun-runner compatibility, regression tests and documentation; commit `34c8ec3`. Route reason: one dependent behavior, no writer trigger. Risk: item 3 (shared parser used by all existing adapters).
 - T2 [S1,S2,S3] inline — verified: lightweight internal engine integrated into the existing controller, same argv helper/result writer, mandatory provider integration, native execution and cancellation/cleanup tests; commit `ed42d7e`. Route reason: depends on T1's parser and contract, not independent parallel work. Risk: items 2,3,4 (private capture files, shared execution contract, cancellation/lifecycle ordering).
 - T3 [S1,S2,S3] inline + bounded measurement worker — verified: functional checks, suite/typecheck, named-risk verifier and package contents passed; nine valid controlled process-tree memory runs recorded in `odd/evidence/native-herdr-engine-memory.json`; source commits `34c8ec3`, `ed42d7e`. Route reason: a per-action worker prepared the synthetic benchmark; parent corrected the isolated PATH and ran the bounded batch. Existing shipping source remains unchanged.
-- T4 [S4] inline — compatibility verified: isolated clean-base cherry-picks `0744f15`, `727b11a`, `1e9e613`; 171 tests, typecheck, shell syntax and fake-runtime smoke passed; scoped push, PR creation and target-host readback pending. Route reason: understood Git/metadata work and one passive README conflict; no writer trigger. Previously verified executable source is unchanged; do not duplicate independent code verification for a documentation-only conflict resolution.
+- T4 [S4] inline — PR #34 created and read back; required CI fixture correction passes all 41 affected cases and typecheck locally, target-host CI recheck pending. Clean-base cherry-picks `0744f15`, `727b11a`, `1e9e613` and preparation `353c892` are published on `feat/native-herdr-engine-pr`; initial local 171-test/typecheck/smoke/syntax checks passed. Route reason: understood Git/metadata work and one test-only CI correction; no writer trigger. Shipping executable source remains unchanged.
+- T5 [S1,S5] delegated direct — pending: inherited-writer EOF completion, parity/privacy/lifecycle regressions and documentation; commit pending. Writer reason: advisory long-session context backstop after repeated specification and investigation payloads; one bounded coherent unit, no parallel writer. Risk: items 2,3,4 (private FIFOs/captures, shared completion contract and asynchronous writer/relay ordering). Own focused/full checks then one independent verifier before publication; RDD remains off.
 
 ## Log
 
@@ -164,3 +171,18 @@ PR limpio único
 - Resumed interrupted PR preparation without repeating the completed cherry-picks. Linked the matching installed dependencies read-only in the isolated worktree; no install or dependency change was required.
 - `bun test`: 171 passed, zero failed, 23 files. `bun run typecheck`, `bun run scripts/smoke.ts` and `/bin/sh -n bin/opencode-herdr-engine`: exit 0 each. The smoke uses fake runtime CLIs and does not call a model provider.
 - These results supersede the earlier 150-test worktree count for current PR compatibility, not the historical nine-run memory experiment. The benchmark's recorded source identifiers remain its original measured revisions.
+
+### L17 — PR created; CI fixture portability correction
+
+- Created `https://github.com/VicenteOlmos/opencode-herdr/pull/34`, `feat/native-herdr-engine-pr` into `main`. Readback confirmed exact title/body/branches/head. GitHub verified all four commit signatures. No unrelated migration commits or new issue/label infrastructure were included.
+- Required GitHub CI `test` observed RED: 130 passed, 41 failed, all 41 errors were `ENOENT` while creating fixtures under `/tmp/opencode`, which exists in the coding environment but not on a clean Actions runner. This is a newly added test-fixture defect, not a shipping-engine behavior change.
+- One correction batch replaces the hardcoded parent in the three new filesystem test files with `node:os.tmpdir()`. Keep all assertions and executable source intact; recheck the 41 affected cases under an isolated `TMPDIR`, typecheck, then publish the correction and let required CI re-run the full suite.
+- Local GREEN: all 41 affected tests passed under a separate existing `TMPDIR`; zero fixture entries remained afterward. Typecheck passed. This correction changes only test fixture locations, not runtime logic, assertions, workflow configuration or dependencies. Required target-host CI will supply the full-suite recheck.
+
+### L18 — Pullfrog finding validated and fix authorized
+
+dale con ese fix entonces
+
+- Read-only review of Pullfrog discussion `4341052696` confirmed a real default-native regression. With the same fake CLI/argv and a one-second inherited stdout writer, native returned `invalid adapter output` in 8 ms and kept its error result after valid output arrived; Bun waited 1017 ms and returned `late final`. Both direct CLI exits were 0 and request bytes matched; non-delayed controls passed.
+- User now authorizes the fix. Use bounded POSIX output relays with genuine EOF completion rather than fixed delays or transcript buffering, preserving existing exit-status and controller cancellation/deadline semantics. Extra relay processes must be documented; earlier memory figures remain tied to their recorded source revisions until remeasured.
+- Parent owns tracking, Git and PR publication. A bounded writer owns only engine, new EOF regression tests and execution-memory docs; it must not alter the existing CI portability changes or the original dirty workspace. No review-thread mutation is authorized.

@@ -1,12 +1,13 @@
 import { expect, test } from "bun:test"
 import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { createJob } from "../src/job"
 
 for (const adapter of ["cursor", "claude", "codex", "opencode"]) {
   for (const exit of [0, 7]) {
     test(`${adapter}: unterminated final progress survives exit ${exit}`, async () => {
-      const root = await mkdtemp("/tmp/opencode/runner-eof-")
+      const root = await mkdtemp(join(tmpdir(), "runner-eof-"))
       try {
         const bin = join(root, "bin")
         await mkdir(bin)

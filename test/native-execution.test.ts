@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { chmod, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { HerdrController } from "../src/controller"
 import { createHerdr } from "../src/provider"
@@ -10,7 +11,7 @@ import type { Target } from "../src/adapters/types"
 
 const engine = new URL("../bin/opencode-herdr-engine", import.meta.url).pathname
 const nativeTest = process.platform === "win32" ? test.skip : test
-const fixtureRoot = "/tmp/opencode/native-execution-"
+const fixtureRoot = join(tmpdir(), "native-execution-")
 const targetFor = (adapter: string): Target => ({ id: `${adapter}/model`, adapter, nativeModel: "model", name: adapter, provenance: "verified", limits: { context: 100, output: 100 }, toolCall: true })
 
 async function fixture(adapter: string, mode = "ok", keep = false, timeout = 3_000) {
