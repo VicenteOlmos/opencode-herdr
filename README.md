@@ -99,6 +99,15 @@ bun install && bun test
 
 Run the opt-in beta native loader smoke with `bun run smoke:v2`. It installs the pinned published beta CLI into an isolated temporary home, uses fake runtime CLIs, and never calls a model provider. Set `OPENCODE_V2_BIN` to an existing matching `opencode2` binary to skip the package download.
 
+## Execution memory
+
+OpenCode integration stays required. On POSIX, jobs use a lightweight internal
+shell executor instead of starting a Bun runner per task. Output is captured in
+private temporary files and parsed incrementally by the existing OpenCode host.
+Set `OPENCODE_HERDR_RUNNER=bun` for compatibility and per-event pane progress.
+`keepJobs` also retains raw captures; do not share them unredacted.
+See [execution memory](docs/execution-memory.md) for limits and tradeoffs.
+
 ## License
 
 MIT
