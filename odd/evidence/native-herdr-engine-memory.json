@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "scope": "Synthetic provider host + executor + fake Cursor CLI process tree; not total OpenCode UI memory",
+  "platform": "Linux",
+  "baseline": "Starting worktree snapshot at 84db6dc with pre-existing user edits",
+  "implementationCommits": ["34c8ec3", "ed42d7e"],
+  "concurrency": 1,
+  "repetitionsPerBackend": 3,
+  "order": [
+    ["baseline", "bun", "native"],
+    ["native", "baseline", "bun"],
+    ["bun", "native", "baseline"]
+  ],
+  "workload": {
+    "outputBytesPerRun": 33555948,
+    "description": "Valid JSONL tool events with 4000-character irrelevant payloads, paced in batches of 128 with 35 ms pauses, then 300 ms hold and a tiny final response",
+    "expectedResponse": "BENCH_FINAL_RESULT",
+    "identicalRuntimeArgv": ["-p", "--output-format", "stream-json", "--model", "fake", "--", "synthetic benchmark task"]
+  },
+  "validation": {
+    "successfulHostExits": 9,
+    "successfulExecutorExits": 9,
+    "identicalProviderResponses": true,
+    "identicalRuntimeArgv": true,
+    "identicalOutputBytesAndBatchSizes": true,
+    "noObservedOwnedProcessesRemaining": true
+  },
+  "method": {
+    "metric": "Sum of /proc/smaps_rollup Pss across each fresh host and its descendants, excluding external sampling driver",
+    "nominalSamplingIntervalMs": 7,
+    "observedMedianSamplingIntervalMsRange": [20.23, 22.30],
+    "summary": "Median of three per-run sampled peaks and median of three per-run time-weighted means",
+    "meanCalculation": "Trapezoidal integral of sampled tree PSS divided by the interval between the first and last samples",
+    "reportedPrecision": "Values rounded to two decimal places",
+    "rawResultsSha256": "e36fc6728784a70f8fec3de7991d2936971424897edb60a97c8a97c30c8ab16a"
+  },
+  "runs": [
+    {"case": "r1-baseline", "backend": "baseline", "peakMiB": 131.37, "timeWeightedMeanMiB": 93.92, "samples": 126, "medianIntervalMs": 21.35},
+    {"case": "r1-bun", "backend": "bun", "peakMiB": 88.01, "timeWeightedMeanMiB": 79.92, "samples": 127, "medianIntervalMs": 21.19},
+    {"case": "r1-native", "backend": "native", "peakMiB": 84.94, "timeWeightedMeanMiB": 53.23, "samples": 140, "medianIntervalMs": 20.23},
+    {"case": "r2-native", "backend": "native", "peakMiB": 79.17, "timeWeightedMeanMiB": 41.18, "samples": 122, "medianIntervalMs": 21.13},
+    {"case": "r2-baseline", "backend": "baseline", "peakMiB": 170.98, "timeWeightedMeanMiB": 84.80, "samples": 120, "medianIntervalMs": 22.30},
+    {"case": "r2-bun", "backend": "bun", "peakMiB": 77.95, "timeWeightedMeanMiB": 70.23, "samples": 128, "medianIntervalMs": 21.45},
+    {"case": "r3-bun", "backend": "bun", "peakMiB": 75.34, "timeWeightedMeanMiB": 68.59, "samples": 131, "medianIntervalMs": 21.21},
+    {"case": "r3-native", "backend": "native", "peakMiB": 75.65, "timeWeightedMeanMiB": 40.45, "samples": 133, "medianIntervalMs": 21.27},
+    {"case": "r3-baseline", "backend": "baseline", "peakMiB": 123.25, "timeWeightedMeanMiB": 82.42, "samples": 128, "medianIntervalMs": 21.47}
+  ],
+  "summary": {
+    "baseline": {
+      "medianPeakMiB": 131.37,
+      "peakRangeMiB": [123.25, 170.98],
+      "medianTimeWeightedMeanMiB": 84.80,
+      "timeWeightedMeanRangeMiB": [82.42, 93.92]
+    },
+    "bun": {
+      "medianPeakMiB": 77.95,
+      "peakRangeMiB": [75.34, 88.01],
+      "medianTimeWeightedMeanMiB": 70.23,
+      "timeWeightedMeanRangeMiB": [68.59, 79.92]
+    },
+    "native": {
+      "medianPeakMiB": 79.17,
+      "peakRangeMiB": [75.65, 84.94],
+      "medianTimeWeightedMeanMiB": 41.18,
+      "timeWeightedMeanRangeMiB": [40.45, 53.23]
+    }
+  },
+  "relativeNativeSavingPercent": {
+    "againstBaseline": {"timeWeightedMean": 51.44, "sampledPeak": 39.74},
+    "againstOptimizedBun": {"timeWeightedMean": 41.37, "sampledPeak": -1.56}
+  },
+  "limitations": [
+    "Synthetic Linux workload, one concurrent job; not a real provider or live Herdr session",
+    "Mandatory provider consumption is exercised, but the real OpenCode UI/service is not launched",
+    "PSS measures these process trees, not whole-machine RAM or reclaimable filesystem page cache",
+    "Sampled peaks can miss short spikes; three repetitions do not establish universal savings",
+    "Native peak did not improve over optimized Bun; observed ranges overlap",
+    "Native execution trades process RAM for temporary disk storage and reduced per-event pane progress"
+  ]
+}
