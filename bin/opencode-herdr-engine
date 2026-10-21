@@ -57,6 +57,9 @@ publish() {
   exit "$status"
 }
 trap publish 0
+# Catch, rather than ignore, SIGPIPE: shell diagnostics can outlive FIFO readers,
+# while executed commands must retain their default signal disposition.
+trap ':' PIPE
 trap 'interrupted=130; exit 130' INT
 trap 'interrupted=143; exit 143' TERM
 printf '%s\n' '[herdr] native execution started' >&2

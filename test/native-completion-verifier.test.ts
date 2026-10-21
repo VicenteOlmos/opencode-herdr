@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { existsSync } from "node:fs"
 import { chmod, lstat, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -10,7 +11,19 @@ const engine = new URL("../bin/opencode-herdr-engine", import.meta.url).pathname
 const nativeTest = process.platform === "win32" ? test.skip : test
 const target: Target = { id: "cursor/fake", adapter: "cursor", nativeModel: "fake", name: "fake", provenance: "verified", limits: { context: 100, output: 100 }, toolCall: true }
 
-async function fixture(script: string) {
+const shells = [{ name: "system sh", argv: ["/bin/sh"] }]
+if (process.platform !== "win32") {
+  for (const name of ["bash", "dash", "ash"]) {
+    const path = Bun.which(name)
+    if (path) shells.push({ name, argv: [path] })
+  }
+  const busybox = Bun.which("busybox") ?? "/usr/lib/initcpio/busybox"
+  if (existsSync(busybox) && Bun.spawnSync([busybox, "ash", "-c", "exit 0"]).exitCode === 0) {
+    shells.push({ name: "BusyBox ash", argv: [busybox, "ash"] })
+  }
+}
+
+async function fixture(script: string, shell = ["/bin/sh"]) {
   const root = await mkdtemp(join(tmpdir(), "native-completion-"))
   const job = await createJob("task", root)
   const command = join(job.dir, "command.sh")
@@ -18,7 +31,7 @@ async function fixture(script: string) {
   await writeFile(command, script.replaceAll("$READY", ready))
   await chmod(command, 0o600)
   const request = await readFile(job.request)
-  const child = Bun.spawn(["/bin/sh", engine, job.dir, "--", "/bin/sh", command], { detached: true, stdout: "pipe", stderr: "pipe" })
+  const child = Bun.spawn([...shell, engine, job.dir, "--", "/bin/sh", command], { detached: true, stdout: "pipe", stderr: "pipe" })
   const output = Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text()])
   return { root, job, ready, request, child, output }
 }
@@ -28,17 +41,34 @@ async function waitFor(path: string) {
   expect(await Bun.file(path).exists()).toBeTrue()
 }
 
-for (const signal of ["SIGINT", "SIGTERM"] as const) {
-  nativeTest(`manual ${signal} publishes readable failure marker and native result`, async () => {
-    const f = await fixture("printf ready > \"$READY\"\nexec /bin/sleep 30\n")
+for (const shell of shells) {
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    nativeTest(`${shell.name}: manual ${signal} publishes readable failure marker and native result`, async () => {
+      const f = await fixture("printf ready > \"$READY\"\nexec /bin/sleep 30\n", shell.argv)
+      try {
+        await waitFor(f.ready)
+        process.kill(-f.child.pid, signal)
+        expect(await f.child.exited).toBe(signal === "SIGINT" ? 130 : 143)
+        expect(await readFile(join(f.job.dir, "exit.status"), "utf8")).toBe(`${signal === "SIGINT" ? 130 : 143}\n`)
+        const result = await nativeResult(f.job, target)
+        expect(result).toMatchObject({ status: "error", diagnostic: `exit ${signal === "SIGINT" ? 130 : 143}` })
+        for (const name of ["stdout.jsonl", "stderr.log", "exit.status"]) expect(((await lstat(join(f.job.dir, name))).mode & 0o077)).toBe(0)
+        expect(await readFile(f.job.request)).toEqual(f.request)
+      } finally {
+        try { process.kill(-f.child.pid, "SIGKILL") } catch {}
+        await f.output
+        await rm(f.root, { recursive: true, force: true })
+      }
+    })
+  }
+
+  nativeTest(`${shell.name}: CLI retains default SIGPIPE disposition`, async () => {
+    const f = await fixture("exec /bin/sh -c 'kill -PIPE $$; printf ignored'\n", shell.argv)
     try {
-      await waitFor(f.ready)
-      process.kill(-f.child.pid, signal)
-      expect(await f.child.exited).toBe(signal === "SIGINT" ? 130 : 143)
-      expect(await readFile(join(f.job.dir, "exit.status"), "utf8")).toBe(`${signal === "SIGINT" ? 130 : 143}\n`)
-      const result = await nativeResult(f.job, target)
-      expect(result).toMatchObject({ status: "error", diagnostic: `exit ${signal === "SIGINT" ? 130 : 143}` })
-      for (const name of ["stdout.jsonl", "stderr.log", "exit.status"]) expect(((await lstat(join(f.job.dir, name))).mode & 0o077)).toBe(0)
+      expect(await f.child.exited).toBe(141)
+      expect(await readFile(join(f.job.dir, "exit.status"), "utf8")).toBe("141\n")
+      expect(await readFile(join(f.job.dir, "stdout.jsonl"), "utf8")).toBe("")
+      expect(await nativeResult(f.job, target)).toMatchObject({ status: "error" })
       expect(await readFile(f.job.request)).toEqual(f.request)
     } finally {
       try { process.kill(-f.child.pid, "SIGKILL") } catch {}

@@ -58,7 +58,9 @@ foreground process group, not just the internal shell PID; the engine cleans up
 its relay children and FIFOs when interrupted while draining. Manual SIGINT and
 SIGTERM publish private exit markers (130 and 143 respectively), so the existing
 native result parser can report the interrupted command without waiting for its
-deadline. OpenCode's AbortSignal remains authoritative for request cancellation.
+deadline. The coordinator catches SIGPIPE from its own diagnostics when relay
+readers have already terminated; it does not ignore SIGPIPE in the selected CLI.
+OpenCode's AbortSignal remains authoritative for request cancellation.
 Result parsing also checks the cancellation signal and result deadline between
 chunks.
 The engine's `--help` documents its internal argv; prompts are never evaluated
