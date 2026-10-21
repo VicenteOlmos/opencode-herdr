@@ -27,11 +27,15 @@ OpenCode remains the required product integration and consumes the engine's outp
 
 The completed investigation found full stdout/stderr retention and a Bun runner per task. Use existing Herdr pane execution with a lightweight on-demand execution component; parse adapter events incrementally in the already-running OpenCode host instead of keeping complete transcripts in RAM. Keep structured final results and bounded diagnostics. Document temporary-storage tradeoffs and any explicit bounds. Synthetic comparisons may quantify runner overhead only; do not claim measured end-to-end CLI savings without a controlled real-workload comparison.
 
+> quiero que midas el ahorro
+
+User reopened reliable memory measurement after the earlier deferral. Run a fresh bounded, controlled comparison of the original runner, optimized Bun backend, and native backend with identical synthetic CLI output and mandatory provider consumption. Report process-tree PSS, workload, repetitions, result equivalence and limitations; do not extrapolate measured executor savings to total OpenCode memory. No real provider or active Herdr session is authorized by this measurement request.
+
 ## Tasks
 
 - T1 [S1,S3] inline — verified: shared incremental adapter-output processing, bounded diagnostics, existing Bun-runner compatibility, regression tests and documentation; commit `34c8ec3`. Route reason: one dependent behavior, no writer trigger. Risk: item 3 (shared parser used by all existing adapters).
-- T2 [S1,S2,S3] inline — verified: lightweight internal engine integrated into the existing controller, same argv helper/result writer, mandatory provider integration, native execution and cancellation/cleanup tests; commit pending. Route reason: depends on T1's parser and contract, not independent parallel work. Risk: items 2,3,4 (private capture files, shared execution contract, cancellation/lifecycle ordering).
-- T3 [S1,S2,S3] inline + independent verification — functional checks verified; memory comparison partial, needs decision: focused checks, suite/typecheck, named-risk verifier and package contents passed; no validated RAM-saving claim. Route reason: parent owns checks, independent verifier required by T1/T2 named risks; long suites may use a bounded per-action worker.
+- T2 [S1,S2,S3] inline — verified: lightweight internal engine integrated into the existing controller, same argv helper/result writer, mandatory provider integration, native execution and cancellation/cleanup tests; commit `ed42d7e`. Route reason: depends on T1's parser and contract, not independent parallel work. Risk: items 2,3,4 (private capture files, shared execution contract, cancellation/lifecycle ordering).
+- T3 [S1,S2,S3] inline + bounded measurement worker — verified: functional checks, suite/typecheck, named-risk verifier and package contents passed; nine valid controlled process-tree memory runs recorded in `odd/evidence/native-herdr-engine-memory.json`; source commits `34c8ec3`, `ed42d7e`. Route reason: a per-action worker prepared the synthetic benchmark; parent corrected the isolated PATH and ran the bounded batch. Existing shipping source remains unchanged.
 
 ## Log
 
@@ -98,3 +102,38 @@ Por algo el plugin se llama opencode-herdr
 - Final workspace functional suite: 150 passed, zero failed; TypeScript no-emit, shell syntax, fake-runtime tab-pool smoke and npm dry-run artifact inclusion checks passed. Native-only tests skip on Windows; no real Windows or active Herdr session was tested, and no real provider was called.
 - One corrected synthetic benchmark produced the same final response and argv in all three fresh hosts, but exited 1 during harness cleanup (`ChildProcess.exited` does not exist). Sampled tree PSS: baseline 148743 KiB, current Bun 98098 KiB, native 83472 KiB, 8–11 samples at nominal 15 ms for about 32 MiB JSONL output. These are provisional observations, not a validated benchmark or an end-to-end memory-saving claim. No further benchmark retry is authorized by the exhausted bounded correction.
 - T3 needs one decision: accept functional completion without a quantified RAM-saving claim, or leave reliable memory measurement pending. Native code verification has no remaining reproduced blocker.
+
+### L10 — Second local work unit and preservation checks
+
+- T2 committed as `ed42d7e`, 438 authored added/deleted lines including integration, tests and docs. This coherent unit keeps its required provider integration and regression proofs together rather than splitting them to meet the advisory size heuristic. Cumulative local feature count: 832 lines, feature-branch-chain strategy retained; no PR, push or release.
+- Verified original tracked edit patches and original untracked source/test bytes against the initial snapshot. Staged only the new README execution section; all prior README edits remain unstaged. Other user work remains unchanged.
+- Read-only check found zero remaining processes matching benchmark scratch/executor paths. This resolves immediate cleanup concern but does not turn the failed benchmark command into a successful validated measurement. No additional benchmark run occurred.
+
+### L11 — User defers measurement
+
+Dejar medición pendiente
+
+- User selected this option in the repeated single-select closure question. T3 remains open; reliable RAM savings are not validated. Do not execute further verification now.
+- Preserve `/tmp/opencode/native-herdr-engine.JeG9Wf` and `/tmp/opencode/native-memory-bench.hELlA4` for the next explicitly authorized measurement task. Other explicitly reported verifier/test scratch directories were removed before this choice.
+- T1/T2 implementation and local commits remain intact. No PR, push or release was authorized or performed.
+
+### L12 — User reopens measurement
+
+quiero que midas el ahorro
+
+- This new request supersedes the earlier pause for T3 only. Run one fresh measurement batch with corrected Node child-process lifecycle handling, identical workloads and fresh hosts, three repetitions of each backend, and checked final results/argv/exit codes.
+- Preserve the previous failed harness as historical evidence; author the new bounded harness in external scratch. Do not modify shipping code or use real providers/active Herdr sessions. Quantify executor process-tree PSS only and disclose sampling/disk-cache limitations.
+
+### L13 — Validated controlled memory comparison
+
+- The new worker attempt stopped before its first workload because its private PATH omitted Bun. Parent corrected the bounded harness to expose only the fake agent and required Bun/sh/ln/rm executables, assert clean executor exits, and check every observed owned PID is gone. No shipping source changed.
+- Executed one fresh nine-case batch in `/tmp/opencode/native-memory-validated.JQjPh9`: three repetitions per backend with rotated order and identical fresh mandatory-provider hosts. Every host and executor exited 0, returned `BENCH_FINAL_RESULT`, received identical argv and emitted exactly 33,555,948 bytes. Each case supplied 120–140 PSS samples; median actual intervals were 20.23–22.30 ms.
+- Median per-run time-weighted tree PSS: original 84.80 MiB; optimized Bun 70.23 MiB; native 41.18 MiB. Native reduction: 51.44% against original and 41.37% against optimized Bun in this paced synthetic workload.
+- Median sampled peak tree PSS: original 131.37 MiB; optimized Bun 77.95 MiB; native 79.17 MiB. Native peak reduction against original: 39.74%. Native did not improve peak against optimized Bun (median 1.56% higher; ranges overlap). Do not claim an additional native peak benefit.
+- Evidence includes all nine cases, observed ranges, method, exit/result/argv checks and raw-results SHA-256 in `odd/evidence/native-herdr-engine-memory.json`. These are executor-tree measurements, not total OpenCode UI/service memory, real-provider savings, whole-system RAM or reclaimable disk cache. OpenCode remains mandatory.
+- Prior partial runs remain historical failures, not proof; this fresh batch supplies the requested comparison. All planned implementation and proportional checks are now complete. No PR, push or release was performed.
+
+### L14 — Evidence retained, scratch removed
+
+- Read back the evidence JSON against all nine raw cases: rounded peaks/means, argv, workload bytes, exit statuses and raw-results digest matched. All four remaining owned benchmark/baseline scratch roots were then removed. Durable numeric proof and limitations remain in `odd/evidence/native-herdr-engine-memory.json`.
+- T1–T3 are verified. No additional source change or functional test-suite rerun was needed for the measurement-only closure. Existing user work remains outside the local feature commits.
