@@ -26,7 +26,7 @@ test("Herdr marketplace manifest installs the pinned OpenCode integration global
       id: "install-opencode",
       title: "Install OpenCode integration",
       contexts: ["global"],
-      command: ["opencode2", "plugin", "add", "opencode-herdr@0.2.0"],
+      command: ["opencode2", "plugin", "add", "opencode-herdr@0.2.2"],
     },
   ])
 })

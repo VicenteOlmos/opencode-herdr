@@ -9,4 +9,4 @@ platforms = ["linux", "macos"]
 id = "install-opencode"
 title = "Install OpenCode integration"
 contexts = ["global"]
-command = ["opencode2", "plugin", "add", "opencode-herdr@0.2.0"]
+command = ["opencode2", "plugin", "add", "opencode-herdr@0.2.2"]
